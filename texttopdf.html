@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Extract Teks dari PDF</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    body { background: #f0f2f5; padding: 2rem; }
+    .container {
+      max-width: 600px; margin: auto; background: #fff;
+      padding: 2rem; border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    h2 { text-align: center; margin-bottom: 1.2rem; color: #333; }
+    input[type="file"], input[type="number"] {
+      display: block; margin: 1rem auto; width: 100%; padding: 0.6rem;
+      border-radius: 6px; border: 1px solid #ccc;
+    }
+    textarea {
+      width: 100%; height: 300px; margin-top: 1rem;
+      padding: 1rem; border-radius: 8px;
+      border: 1px solid #ccc; resize: vertical;
+      font-size: 1rem;
+    }
+    button {
+      width: 100%; padding: 0.8rem; margin-top: 1rem;
+      background: #0055ff; color: white; border: none;
+      border-radius: 8px; font-size: 1rem; cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover { background: #003fdd; }
+    #loader {
+      display: none; margin-top: 1rem; text-align: center;
+    }
+    .spinner {
+      width: 24px; height: 24px;
+      border: 4px solid #ccc;
+      border-top: 4px solid #0055ff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); }
+    }
+    #backBtn {
+      margin-top: 1rem; background: #777;
+    }
+    #backBtn:hover { background: #555; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📄 Extract & Ekspor Teks PDF</h2>
+    <input type="file" id="pdfInput" accept="application/pdf" />
+    <input type="number" id="pageNumber" placeholder="Nomor halaman (kosong = semua)" min="1" />
+    <div id="loader"><div class="spinner"></div><p>Mengambil teks dari PDF...</p></div>
+    <textarea id="outputText" placeholder="Teks hasil ekstraksi akan muncul di sini..."></textarea>
+    <button onclick="downloadAsTxt()">💾 Unduh Sebagai TXT</button>
+    <button id="backBtn" onclick="window.location.href='index.html'">⬅️ Kembali ke Index</button>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.162/pdf.min.js"></script>
+  <script>
+    const input = document.getElementById("pdfInput");
+    const pageInput = document.getElementById("pageNumber");
+    const output = document.getElementById("outputText");
+    const loader = document.getElementById("loader");
+
+    input.addEventListener("change", async () => {
+      const file = input.files[0];
+      if (!file) return;
+
+      loader.style.display = "block";
+      output.value = "";
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const loadingTask = pdfjsLib.getDocument({ data: reader.result });
+        const pdf = await loadingTask.promise;
+        let fullText = "";
+
+        const pageNum = parseInt(pageInput.value);
+        if (pageNum && pageNum >= 1 && pageNum <= pdf.numPages) {
+          const page = await pdf.getPage(pageNum);
+          const content = await page.getTextContent();
+          const strings = content.items.map(item => item.str);
+          fullText += `--- Halaman ${pageNum} ---\n` + strings.join(" ") + "\n";
+        } else {
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            const strings = content.items.map(item => item.str);
+            fullText += `--- Halaman ${i} ---\n` + strings.join(" ") + "\n\n";
+          }
+        }
+
+        output.value = fullText;
+        loader.style.display = "none";
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    function downloadAsTxt() {
+      const text = output.value.trim();
+      if (!text) return alert("Tidak ada teks untuk disimpan.");
+
+      const blob = new Blob([text], { type: "text/plain" });
+      const link = document.createElement("a");
+      link.download = `extracted_${Date.now()}.txt`;
+      link.href = URL.createObjectURL(blob);
+      link.click();
+    }
+  </script>
+</body>
+</html>

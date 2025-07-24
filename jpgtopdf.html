@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JPG ke PDF Converter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    body { background: #f5f7fa; padding: 2rem; }
+    .container {
+      max-width: 480px; margin: auto; background: #fff;
+      padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h2 { text-align: center; color: #333; margin-bottom: 1.5rem; }
+    input[type="file"] {
+      display: block; margin: 1rem auto; padding: 1rem;
+    }
+    button {
+      width: 100%; padding: 0.8rem; border: none;
+      border-radius: 8px; background: #0055ff; color: white;
+      cursor: pointer; font-size: 1rem; transition: background 0.3s;
+    }
+    button:hover { background: #003fdd; }
+    #preview {
+      max-width: 100%; margin-top: 1rem; border-radius: 8px;
+    }
+    #loader {
+      display: none; margin-top: 1rem; text-align: center;
+    }
+    #loader .spinner {
+      width: 24px; height: 24px; border: 4px solid #ccc;
+      border-top: 4px solid #0055ff; border-radius: 50%;
+      animation: spin 1s linear infinite; margin: auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); }
+    }
+    #savedFiles { margin-top: 2rem; font-size: 0.9rem; color: #444; }
+    #backBtn {
+      margin-top: 1rem; padding: 0.8rem; background: #777;
+      color: white; border: none; border-radius: 8px;
+      cursor: pointer; font-size: 1rem; transition: background 0.3s;
+    }
+    #backBtn:hover { background: #555; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🖼️ JPG ke PDF Converter</h2>
+    <input type="file" id="fileInput" accept="image/jpeg,image/png" />
+    <img id="preview" />
+    <button onclick="convertToPDF()">📄 Convert dan Simpan</button>
+    <div id="loader"><div class="spinner"></div><p>Memproses PDF...</p></div>
+    <div id="savedFiles"></div>
+    <button id="backBtn" onclick="window.location.href='index.html'">⬅️ Kembali ke Index</button>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    const preview = document.getElementById("preview");
+    const loader = document.getElementById("loader");
+    const savedFiles = document.getElementById("savedFiles");
+    const fileInput = document.getElementById("fileInput");
+
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => preview.src = reader.result;
+      reader.readAsDataURL(file);
+    });
+
+    async function convertToPDF() {
+      const file = fileInput.files[0];
+      if (!file) return alert("Pilih gambar terlebih dahulu.");
+
+      loader.style.display = "block";
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF();
+        pdf.addImage(reader.result, "JPEG", 10, 10, 180, 160);
+        const fileName = `jpgtopdf_${Date.now()}.pdf`;
+        pdf.save(fileName);
+
+        const saved = JSON.parse(localStorage.getItem("convertedFiles")) || [];
+        saved.push(fileName);
+        localStorage.setItem("convertedFiles", JSON.stringify(saved));
+
+        loader.style.display = "none";
+        showSavedFiles();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function showSavedFiles() {
+      const saved = JSON.parse(localStorage.getItem("convertedFiles")) || [];
+      if (saved.length === 0) {
+        savedFiles.textContent = "Belum ada file yang disimpan.";
+        return;
+      }
+
+      savedFiles.innerHTML = "<strong>🗂️ File yang sudah dikonversi:</strong><ul>" +
+        saved.map(name => `<li>${name}</li>`).join("") + "</ul>";
+    }
+
+    showSavedFiles();
+  </script>
+</body>
+</html>

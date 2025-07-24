@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JPG Drag & Sort ke PDF</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sortable/1.15.0/Sortable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    body { background: #f5f7fa; padding: 2rem; }
+    .container {
+      max-width: 520px; margin: auto; background: #fff;
+      padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h2 { text-align: center; margin-bottom: 1rem; }
+    #dropZone {
+      border: 2px dashed #aaa; padding: 1rem; text-align: center;
+      border-radius: 8px; background: #f0f2f6; cursor: pointer;
+    }
+    #dropZone.dragover { background: #dbeafe; border-color: #0055ff; }
+    .preview {
+      display: flex; flex-wrap: wrap; gap: 10px; margin-top: 1rem;
+    }
+    .preview-item {
+      width: 100px; position: relative;
+    }
+    .preview-item img {
+      width: 100%; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .preview-item span {
+      position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.5);
+      color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;
+    }
+    select, button {
+      width: 100%; padding: 0.8rem; margin-top: 1rem;
+      border: none; border-radius: 8px; font-size: 1rem;
+    }
+    select { background: #eef; }
+    button {
+      background: #0055ff; color: white; cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover { background: #003fdd; }
+    #loader {
+      display: none; margin-top: 1rem; text-align: center;
+    }
+    .spinner {
+      width: 24px; height: 24px; border: 4px solid #ccc;
+      border-top: 4px solid #0055ff; border-radius: 50%;
+      animation: spin 1s linear infinite; margin: auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); }
+    }
+    #backBtn { margin-top: 1rem; background: #777; }
+    #backBtn:hover { background: #555; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🖼️ JPG Sort & Convert ke PDF</h2>
+
+    <div id="dropZone">🪄 Drag & Drop gambar di sini<br>atau klik untuk memilih</div>
+    <input type="file" id="imageInput" accept="image/jpeg,image/png" multiple style="display:none;" />
+    
+    <div class="preview" id="previewList"></div>
+
+    <select id="pageSize">
+      <option value="a4">A4</option>
+      <option value="letter">Letter</option>
+    </select>
+    <select id="orientation">
+      <option value="portrait">Portrait</option>
+      <option value="landscape">Landscape</option>
+    </select>
+
+    <button onclick="generatePDF()">📄 Buat PDF</button>
+    <div id="loader"><div class="spinner"></div><p>Menggabungkan gambar...</p></div>
+    <button id="backBtn" onclick="window.location.href='index.html'">⬅️ Kembali ke Index</button>
+  </div>
+
+  <script>
+    const dropZone = document.getElementById("dropZone");
+    const imageInput = document.getElementById("imageInput");
+    const previewList = document.getElementById("previewList");
+    const loader = document.getElementById("loader");
+    const pageSize = document.getElementById("pageSize");
+    const orientation = document.getElementById("orientation");
+
+    let files = [];
+
+    dropZone.addEventListener("click", () => imageInput.click());
+    dropZone.addEventListener("dragover", e => {
+      e.preventDefault(); dropZone.classList.add("dragover");
+    });
+    dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragover"));
+    dropZone.addEventListener("drop", e => {
+      e.preventDefault(); dropZone.classList.remove("dragover");
+      handleFiles(e.dataTransfer.files);
+    });
+    imageInput.addEventListener("change", () => handleFiles(imageInput.files));
+
+    function handleFiles(selectedFiles) {
+      files = [...files, ...selectedFiles];
+      renderPreview();
+    }
+
+    function renderPreview() {
+      previewList.innerHTML = "";
+      files.forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const item = document.createElement("div");
+          item.classList.add("preview-item");
+          item.innerHTML = `<img src="${reader.result}" /><span>${index + 1}</span>`;
+          item.dataset.index = index;
+          previewList.appendChild(item);
+        };
+        reader.readAsDataURL(file);
+      });
+      Sortable.create(previewList, {
+        animation: 150,
+        onEnd: evt => {
+          const newOrder = [];
+          previewList.querySelectorAll(".preview-item").forEach(item => {
+            newOrder.push(files[parseInt(item.dataset.index)]);
+          });
+          files = newOrder;
+          renderPreview();
+        }
+      });
+    }
+
+    async function generatePDF() {
+      if (files.length === 0) return alert("Tambahkan gambar terlebih dahulu.");
+      loader.style.display = "block";
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({
+        orientation: orientation.value,
+        format: pageSize.value,
+        unit: "mm"
+      });
+
+      for (let i = 0; i < files.length; i++) {
+        const reader = new FileReader();
+        await new Promise(resolve => {
+          reader.onload = () => {
+            if (i > 0) pdf.addPage();
+            pdf.addImage(reader.result, "JPEG", 10, 10, 180, 160);
+            resolve();
+          };
+          reader.readAsDataURL(files[i]);
+        });
+      }
+
+      const fileName = `sorted_jpg_${Date.now()}.pdf`;
+      pdf.save(fileName);
+
+      const saved = JSON.parse(localStorage.getItem("sortedJpgToPdfFiles") || "[]");
+      saved.push(fileName);
+      localStorage.setItem("sortedJpgToPdfFiles", JSON.stringify(saved));
+
+      loader.style.display = "none";
+    }
+  </script>
+</body>
+</html>

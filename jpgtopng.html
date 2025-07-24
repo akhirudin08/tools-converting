@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JPG ↔ PNG Converter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    body { background: #f5f7fa; padding: 2rem; }
+    .container {
+      max-width: 480px; margin: auto; background: #fff;
+      padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h2 { text-align: center; color: #333; margin-bottom: 1.5rem; }
+    input[type="file"] { display: block; margin: 1rem auto; }
+    canvas { display: none; }
+    button {
+      width: 100%; padding: 0.8rem; margin-top: 1rem;
+      border: none; border-radius: 8px;
+      background: #0055ff; color: white;
+      cursor: pointer; font-size: 1rem;
+      transition: background 0.3s;
+    }
+    button:hover { background: #003fdd; }
+    #loader {
+      display: none; margin-top: 1rem; text-align: center;
+    }
+    .spinner {
+      width: 24px; height: 24px; border: 4px solid #ccc;
+      border-top: 4px solid #0055ff;
+      border-radius: 50%; animation: spin 1s linear infinite;
+      margin: auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); }
+    }
+    #backBtn {
+      margin-top: 1rem; background: #777;
+    }
+    #backBtn:hover { background: #555; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🖼️ JPG ↔ PNG Converter</h2>
+    <input type="file" id="imageInput" accept="image/jpeg,image/png" />
+    <button onclick="convertImage()">🔄 Convert dan Unduh</button>
+    <div id="loader"><div class="spinner"></div><p>Mengonversi gambar...</p></div>
+    <canvas id="canvas"></canvas>
+    <button id="backBtn" onclick="window.location.href='index.html'">⬅️ Kembali ke Index</button>
+  </div>
+
+  <script>
+    const input = document.getElementById("imageInput");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const loader = document.getElementById("loader");
+
+    function convertImage() {
+      const file = input.files[0];
+      if (!file) return alert("Pilih gambar terlebih dahulu.");
+
+      loader.style.display = "block";
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+
+          const isJPG = file.type === "image/jpeg";
+          const outputFormat = isJPG ? "image/png" : "image/jpeg";
+          const extension = isJPG ? "png" : "jpg";
+          const dataURL = canvas.toDataURL(outputFormat);
+
+          const link = document.createElement("a");
+          link.download = `converted_${Date.now()}.${extension}`;
+          link.href = dataURL;
+          link.click();
+
+          // Simpan nama file ke localStorage
+          const saved = JSON.parse(localStorage.getItem("imgConvertedFiles") || "[]");
+          saved.push(link.download);
+          localStorage.setItem("imgConvertedFiles", JSON.stringify(saved));
+
+          loader.style.display = "none";
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  </script>
+</body>
+</html>

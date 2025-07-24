@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PDF ke JPG Converter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    body { background: #f0f2f5; padding: 2rem; }
+    .container {
+      max-width: 480px; margin: auto; background: #fff;
+      padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h2 { text-align: center; color: #333; margin-bottom: 1.5rem; }
+    input[type="file"] { display: block; margin: 1rem auto; }
+    canvas { width: 100%; margin-top: 1rem; display: block; }
+    button {
+      width: 100%; padding: 0.8rem; margin-top: 1rem;
+      border: none; border-radius: 8px;
+      background: #0055ff; color: white;
+      cursor: pointer; font-size: 1rem;
+      transition: background 0.3s;
+    }
+    button:hover { background: #003fdd; }
+    #loader {
+      display: none; margin-top: 1rem; text-align: center;
+    }
+    .spinner {
+      width: 24px; height: 24px; border: 4px solid #ccc;
+      border-top: 4px solid #0055ff;
+      border-radius: 50%; animation: spin 1s linear infinite;
+      margin: auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); }
+    }
+    #downloadBtn { margin-top: 1rem; display: none; }
+    #backBtn { margin-top: 1rem; background: #777; }
+    #backBtn:hover { background: #555; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📄 PDF ke JPG Converter</h2>
+    <input type="file" id="pdfInput" accept="application/pdf">
+    <div id="loader"><div class="spinner"></div><p>Memproses PDF...</p></div>
+    <canvas id="pdfCanvas"></canvas>
+    <button id="downloadBtn" onclick="downloadImage()">💾 Unduh Gambar</button>
+    <button id="backBtn" onclick="window.location.href='index.html'">⬅️ Kembali ke Index</button>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.162/pdf.min.js"></script>
+  <script>
+    const input = document.getElementById("pdfInput");
+    const canvas = document.getElementById("pdfCanvas");
+    const ctx = canvas.getContext("2d");
+    const loader = document.getElementById("loader");
+    const downloadBtn = document.getElementById("downloadBtn");
+
+    let imgData;
+
+    input.addEventListener("change", async () => {
+      const file = input.files[0];
+      if (!file) return;
+
+      loader.style.display = "block";
+      downloadBtn.style.display = "none";
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const loadingTask = pdfjsLib.getDocument({ data: reader.result });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 2 });
+
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        // Convert canvas to image data
+        imgData = canvas.toDataURL("image/jpeg");
+        downloadBtn.style.display = "inline-block";
+        loader.style.display = "none";
+
+        // Simpan nama ke localStorage
+        const name = `pdf_page_${Date.now()}.jpg`;
+        const saved = JSON.parse(localStorage.getItem("pdfToJpgFiles") || "[]");
+        saved.push(name);
+        localStorage.setItem("pdfToJpgFiles", JSON.stringify(saved));
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    function downloadImage() {
+      const link = document.createElement("a");
+      link.download = `pdf_page_${Date.now()}.jpg`;
+      link.href = imgData;
+      link.click();
+    }
+  </script>
+</body>
+</html>

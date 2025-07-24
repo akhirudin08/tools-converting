@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Konversi File</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    body { background: #f0f2f5; padding: 2rem; }
+    .container {
+      max-width: 640px; margin: auto; background: #fff;
+      padding: 2rem; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+    h1 {
+      text-align: center; margin-bottom: 1.5rem;
+      font-size: 1.8rem; color: #333;
+    }
+    .grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .tool {
+      background: #eef; padding: 1rem; text-align: center;
+      border-radius: 8px; cursor: pointer; transition: 0.3s;
+    }
+    .tool:hover { background: #cde; }
+    .tool span {
+      display: block; font-size: 1.05rem;
+      font-weight: 600; margin-top: 0.5rem;
+    }
+    footer {
+      text-align: center; margin-top: 2rem;
+      font-size: 0.9rem; color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📁 Dashboard Konversi File</h1>
+    <div class="grid">
+      <div class="tool" onclick="goTo('txttopdf.html')">📝<span>TXT ke PDF</span></div>
+      <div class="tool" onclick="goTo('htmltopdf.html')">🌐<span>HTML ke PDF</span></div>
+      <div class="tool" onclick="goTo('jpgtopdf.html')">🖼️<span>JPG ke PDF</span></div>
+      <div class="tool" onclick="goTo('multijpgtopdf.html')">📸<span>Multi JPG ke PDF</span></div>
+      <div class="tool" onclick="goTo('pdftojpg.html')">📄<span>PDF ke JPG</span></div>
+      <div class="tool" onclick="goTo('jpgtopng.html')">🎨<span>JPG ↔ PNG</span></div>
+      <div class="tool" onclick="goTo('pdftopng.html')">🖼️<span>PDF ke PNG</span></div>
+      <div class="tool" onclick="goTo('txttopdf.html')">🔎<span>Extract Teks PDF</span></div>
+    </div>
+    <footer>🚀 Dibuat oleh Mohamad Akhirudin | <span id="year"></span></footer>
+  </div>
+
+  <script>
+    function goTo(page) {
+      window.location.href = page;
+    }
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

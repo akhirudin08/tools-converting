@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF ke PNG Converter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    body { background: #f0f2f5; padding: 2rem; }
+    .container {
+      max-width: 500px; margin: auto; background: #fff;
+      padding: 2rem; border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    h2 { text-align: center; margin-bottom: 1.5rem; color: #333; }
+    input[type="file"] {
+      display: block; margin: 1rem auto;
+    }
+    canvas {
+      max-width: 100%; display: block; margin: 1rem auto;
+      border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    button {
+      width: 100%; padding: 0.8rem; margin-top: 1rem;
+      background: #0055ff; color: white;
+      border: none; border-radius: 8px;
+      font-size: 1rem; cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover { background: #003fdd; }
+    #loader {
+      display: none; margin-top: 1rem; text-align: center;
+    }
+    .spinner {
+      width: 24px; height: 24px;
+      border: 4px solid #ccc;
+      border-top: 4px solid #0055ff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); }
+    }
+    #savedFiles {
+      margin-top: 1.5rem; font-size: 0.9rem; color: #444;
+    }
+    #backBtn {
+      margin-top: 1rem; background: #777;
+    }
+    #backBtn:hover { background: #555; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📄 PDF ke PNG Converter</h2>
+    <input type="file" id="pdfInput" accept="application/pdf" />
+    <canvas id="canvas"></canvas>
+    <button id="downloadBtn" style="display:none;">💾 Unduh PNG</button>
+    <div id="loader"><div class="spinner"></div><p>Memproses halaman PDF...</p></div>
+    <div id="savedFiles"></div>
+    <button id="backBtn" onclick="window.location.href='index.html'">⬅️ Kembali ke Index</button>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.162/pdf.min.js"></script>
+  <script>
+    const input = document.getElementById("pdfInput");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const loader = document.getElementById("loader");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const savedFiles = document.getElementById("savedFiles");
+
+    let pngData;
+
+    input.addEventListener("change", async () => {
+      const file = input.files[0];
+      if (!file) return;
+
+      loader.style.display = "block";
+      downloadBtn.style.display = "none";
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const loadingTask = pdfjsLib.getDocument({ data: reader.result });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 2 });
+
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        pngData = canvas.toDataURL("image/png");
+        downloadBtn.style.display = "inline-block";
+        loader.style.display = "none";
+
+        const fileName = `pdfpage_${Date.now()}.png`;
+        const saved = JSON.parse(localStorage.getItem("pdfToPngFiles") || "[]");
+        saved.push(fileName);
+        localStorage.setItem("pdfToPngFiles", JSON.stringify(saved));
+        showSavedFiles();
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    downloadBtn.addEventListener("click", () => {
+      const link = document.createElement("a");
+      link.download = `pdfpage_${Date.now()}.png`;
+      link.href = pngData;
+      link.click();
+    });
+
+    function showSavedFiles() {
+      const saved = JSON.parse(localStorage.getItem("pdfToPngFiles") || "[]");
+      if (saved.length === 0) {
+        savedFiles.textContent = "Belum ada file yang disimpan.";
+        return;
+      }
+      savedFiles.innerHTML = "<strong>🗂️ File yang sudah dikonversi:</strong><ul>" +
+        saved.map(name => `<li>${name}</li>`).join("") + "</ul>";
+    }
+
+    showSavedFiles();
+  </script>
+</body>
+</html>
