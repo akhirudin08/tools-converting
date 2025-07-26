@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gabung PDF dengan Urutan</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    body { background: #f5f7fa; padding: 2rem; }
+    .container {
+      max-width: 480px; margin: auto; background: #fff;
+      padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h2 { text-align: center; color: #333; margin-bottom: 1rem; }
+    input[type="file"] { display: block; margin: 1rem auto; }
+    ul#fileList {
+      list-style: none; padding: 0; margin: 1rem 0;
+    }
+    ul#fileList li {
+      padding: 0.6rem 1rem; margin-bottom: 8px;
+      background: #f0f0f0; border-radius: 6px; cursor: grab;
+    }
+    button {
+      width: 100%; padding: 0.8rem; border: none;
+      border-radius: 8px; background: #0055ff; color: white;
+      cursor: pointer; font-size: 1rem; transition: background 0.3s;
+    }
+    button:hover { background: #003fdd; }
+    #loader {
+      display: none; margin-top: 1rem; text-align: center;
+    }
+    #loader .spinner {
+      width: 24px; height: 24px; border: 4px solid #ccc;
+      border-top: 4px solid #0055ff; border-radius: 50%;
+      animation: spin 1s linear infinite; margin: auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); }
+    }
+    #savedFiles { margin-top: 2rem; font-size: 0.9rem; color: #444; }
+    #backBtn {
+      margin-top: 1rem; padding: 0.8rem; background: #777;
+      color: white; border: none; border-radius: 8px;
+      cursor: pointer; font-size: 1rem; transition: background 0.3s;
+    }
+    #backBtn:hover { background: #555; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>📎 Gabung PDF dengan Urutan</h2>
+  <input type="file" id="fileInput" accept="application/pdf" multiple />
+  <ul id="fileList"></ul>
+  <button onclick="mergePDFs()">📄 Gabungkan dan Simpan</button>
+  <div id="loader"><div class="spinner"></div><p>Memproses PDF...</p></div>
+  <div id="savedFiles"></div>
+  <button id="backBtn" onclick="window.location.href='index.html'">⬅️ Kembali ke Index</button>
+</div>
+
+<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<script>
+  const loader = document.getElementById("loader");
+  const savedFiles = document.getElementById("savedFiles");
+  const fileInput = document.getElementById("fileInput");
+  const fileList = document.getElementById("fileList");
+  let selectedFiles = [];
+
+  fileInput.addEventListener("change", () => {
+    selectedFiles = Array.from(fileInput.files);
+    fileList.innerHTML = "";
+
+    selectedFiles.forEach((file) => {
+      const li = document.createElement("li");
+      li.textContent = file.name;
+      li.setAttribute("data-name", file.name);
+      fileList.appendChild(li);
+    });
+  });
+
+  new Sortable(fileList, { animation: 150 });
+
+  async function mergePDFs() {
+    if (selectedFiles.length < 2) return alert("Pilih minimal dua file PDF.");
+    loader.style.display = "block";
+
+    const orderedNames = Array.from(fileList.children).map(li => li.dataset.name);
+    const mergedPdf = await PDFLib.PDFDocument.create();
+
+    for (const name of orderedNames) {
+      const file = selectedFiles.find(f => f.name === name);
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
+      const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+      copiedPages.forEach((page) => mergedPdf.addPage(page));
+    }
+
+    const mergedPdfBytes = await mergedPdf.save();
+    const blob = new Blob([mergedPdfBytes], { type: "application/pdf" });
+    const fileName = `gabunganpdf_${Date.now()}.pdf`;
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    link.click();
+
+    const saved = JSON.parse(localStorage.getItem("mergedFiles")) || [];
+    saved.push(fileName);
+    localStorage.setItem("mergedFiles", JSON.stringify(saved));
+
+    loader.style.display = "none";
+    showSavedFiles();
+  }
+
+  function showSavedFiles() {
+    const saved = JSON.parse(localStorage.getItem("mergedFiles")) || [];
+    if (saved.length === 0) {
+      savedFiles.textContent = "Belum ada file yang digabung.";
+      return;
+    }
+
+    savedFiles.innerHTML = "<strong>🗂️ File yang sudah digabung:</strong><ul>" +
+      saved.map(name => `<li>${name}</li>`).join("") + "</ul>";
+  }
+
+  showSavedFiles();
+</script>
+</body>
+</html>
