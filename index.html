@@ -16,6 +16,11 @@
       text-align: center; margin-bottom: 1.5rem;
       font-size: 1.8rem; color: #333;
     }
+    #searchInput {
+      width: 100%; padding: 0.8rem;
+      margin-bottom: 1.2rem; font-size: 1rem;
+      border-radius: 8px; border: 1px solid #ccc;
+    }
     .grid {
       display: grid; grid-template-columns: 1fr 1fr;
       gap: 1rem;
@@ -38,7 +43,8 @@
 <body>
   <div class="container">
     <h1>📁 Dashboard Konversi File</h1>
-    <div class="grid">
+    <input type="text" id="searchInput" placeholder="🔍 Cari konversi...">
+    <div class="grid" id="toolGrid">
       <div class="tool" onclick="goTo('txttopdf.html')">📝<span>TXT ke PDF</span></div>
       <div class="tool" onclick="goTo('htmltopdf.html')">🌐<span>HTML ke PDF</span></div>
       <div class="tool" onclick="goTo('jpgtopdf.html')">🖼️<span>JPG ke PDF</span></div>
@@ -46,7 +52,8 @@
       <div class="tool" onclick="goTo('pdftojpg.html')">📄<span>PDF ke JPG</span></div>
       <div class="tool" onclick="goTo('jpgtopng.html')">🎨<span>JPG ↔ PNG</span></div>
       <div class="tool" onclick="goTo('pdftopng.html')">🖼️<span>PDF ke PNG</span></div>
-      <div class="tool" onclick="goTo('txttopdf.html')">🔎<span>Extract Teks PDF</span></div>
+      <div class="tool" onclick="goTo('pdftotext.html')">🔎<span>Extract Teks PDF</span></div>
+      <div class="tool" onclick="goTo('gabunganpdf.html')">📎<span>Gabung PDF</span></div>
     </div>
     <footer>🚀 Dibuat oleh Mohamad Akhirudin | <span id="year"></span></footer>
   </div>
@@ -55,7 +62,19 @@
     function goTo(page) {
       window.location.href = page;
     }
+
     document.getElementById("year").textContent = new Date().getFullYear();
+
+    const searchInput = document.getElementById("searchInput");
+    const toolItems = document.querySelectorAll(".tool");
+
+    searchInput.addEventListener("input", () => {
+      const keyword = searchInput.value.toLowerCase();
+      toolItems.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(keyword) ? "block" : "none";
+      });
+    });
   </script>
 </body>
 </html>
