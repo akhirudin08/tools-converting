@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>File Compressor (ZIP)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    body { background: #f5f7fa; padding: 2rem; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0;}
+    .container {
+      max-width: 520px; width: 100%; margin: auto; background: #fff;
+      padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    h2 { text-align: center; color: #333; margin-bottom: 1.5rem; }
+    
+    .file-input-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+        width: 100%;
+        padding: 0.8rem;
+        border: 2px dashed #ccc;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: border-color 0.3s, background-color 0.3s;
+    }
+    .file-input-wrapper:hover {
+        border-color: #0055ff;
+        background-color: #f0f5ff;
+    }
+    .file-input-wrapper input[type=file] {
+        font-size: 100px;
+        position: absolute;
+        left: 0;
+        top: 0;
+        opacity: 0;
+        cursor: pointer;
+    }
+    .file-input-label {
+        color: #555;
+        font-size: 1rem;
+    }
+
+    #fileList {
+        margin-top: 1.5rem;
+        text-align: left;
+        font-size: 0.9rem;
+        color: #444;
+        max-height: 150px;
+        overflow-y: auto;
+        padding: 0.5rem;
+        background: #f9f9f9;
+        border-radius: 6px;
+    }
+    #fileList ul {
+        list-style-type: none;
+        padding-left: 0;
+        margin: 0;
+    }
+    #fileList li {
+        padding: 4px 0;
+        border-bottom: 1px solid #eee;
+    }
+    #fileList li:last-child {
+        border-bottom: none;
+    }
+    
+    button {
+      width: 100%; padding: 0.8rem; margin-top: 1.5rem;
+      border: none; border-radius: 8px;
+      background: #0055ff; color: white;
+      cursor: pointer; font-size: 1rem; font-weight: bold;
+      transition: background 0.3s;
+    }
+    button:hover { background: #003fdd; }
+    button:disabled { background: #aab; cursor: not-allowed; }
+
+    #loader {
+      display: none; margin-top: 1rem; text-align: center;
+    }
+    .spinner {
+      width: 24px; height: 24px; border: 4px solid #ccc;
+      border-top: 4px solid #0055ff;
+      border-radius: 50%; animation: spin 1s linear infinite;
+      margin: auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); }
+    }
+    
+    /* Style untuk Tombol Kembali */
+    #backBtn {
+      margin-top: 1rem;
+      background: #777; /* Warna abu-abu */
+    }
+    #backBtn:hover {
+      background: #555; /* Warna lebih gelap saat disentuh mouse */
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🗜️ File Compressor</h2>
+    
+    <div class="file-input-wrapper">
+        <span class="file-input-label">Pilih satu atau beberapa file</span>
+        <input type="file" id="fileInput" multiple>
+    </div>
+
+    <div id="fileList" style="display: none;">
+        <strong>File yang Dipilih:</strong>
+        <ul id="selectedFilesList"></ul>
+    </div>
+    
+    <button id="compressBtn" onclick="compressFiles()" disabled>Compress dan Unduh ZIP</button>
+    
+    <div id="loader">
+        <div class="spinner"></div>
+        <p>Mengompres file, harap tunggu...</p>
+    </div>
+
+    <button id="backBtn" onclick="window.location.href='index.html'">⬅️ Kembali ke Index</button>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const fileListDiv = document.getElementById('fileList');
+    const selectedFilesList = document.getElementById('selectedFilesList');
+    const compressBtn = document.getElementById('compressBtn');
+    const loader = document.getElementById('loader');
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            fileListDiv.style.display = 'block';
+            selectedFilesList.innerHTML = ''; 
+
+            Array.from(fileInput.files).forEach(file => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+                selectedFilesList.appendChild(listItem);
+            });
+
+            compressBtn.disabled = false;
+        } else {
+            fileListDiv.style.display = 'none';
+            compressBtn.disabled = true;
+        }
+    });
+
+    async function compressFiles() {
+        const files = fileInput.files;
+        if (files.length === 0) {
+            alert("Silakan pilih file terlebih dahulu.");
+            return;
+        }
+
+        loader.style.display = 'block';
+        compressBtn.style.display = 'none';
+
+        const zip = new JSZip();
+
+        for (let i = 0; i < files.length; i++) {
+            zip.file(files[i].name, files[i]);
+        }
+
+        try {
+            const content = await zip.generateAsync({
+                type: "blob",
+                compression: "DEFLATE",
+                compressionOptions: {
+                    level: 9
+                }
+            });
+            saveAs(content, `compressed_files_${Date.now()}.zip`);
+        
+        } catch (error) {
+            console.error("Gagal membuat file ZIP:", error);
+            alert("Terjadi kesalahan saat mengompres file.");
+        } finally {
+            loader.style.display = 'none';
+            compressBtn.style.display = 'block';
+        }
+    }
+  </script>
+</body>
+</html>
