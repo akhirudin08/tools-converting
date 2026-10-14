@@ -24,6 +24,7 @@ Semua tool dibuka lewat satu dashboard (tanpa berpindah halaman):
 | PDF + Gambar ke PDF | Campur PDF + gambar, urutkan, jadi satu PDF |
 | Tanda Tangan PDF | Upload PDF + TTD PNG, geser posisinya di halaman |
 | Kompresor ZIP | Gabung & kompres file jadi satu ZIP |
+| Remove Background | Hapus warna latar jadi PNG transparan |
 
 Fitur pendukung:
 
