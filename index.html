@@ -145,13 +145,20 @@ a.btn-ghost{color:#2F3A1D}
 .empty{text-align:center;padding:50px 20px;color:var(--ink-mute);font-weight:600;display:none}
 
 /* ---------- TANDATANGAN ---------- */
-.stage{position:relative;background:#fff;border-radius:var(--radius-md);overflow:hidden;display:none;touch-action:none}
-.stage.on{display:block}
-.stage canvas{display:block;width:100%;height:auto}
-.stage img{position:absolute;left:0;top:0;transform-origin:top left;cursor:grab;touch-action:none;filter:drop-shadow(0 4px 10px rgba(0,0,0,.25))}
-.stage img.drag{cursor:grabbing}
-.stage img.off{display:none}
-input[type=range]{width:100%;accent-color:#CFFF74;cursor:pointer}
+.ttd-scroll{max-height:52vh;overflow:auto;padding:2px}
+.page{position:relative;background:#fff;border-radius:12px;overflow:hidden;margin:0 auto 14px;box-shadow:0 6px 18px rgba(0,0,0,.14);width:100%}
+.page canvas{display:block;width:100%;height:auto}
+.sig{position:absolute;cursor:grab;touch-action:none;user-select:none;border:1px dashed transparent}
+.sig:hover,.sig:active{border-color:#CFFF74}
+.sig img{width:100%;display:block;pointer-events:none;-webkit-user-drag:none}
+.sig .del{position:absolute;top:-10px;right:-10px;width:22px;height:22px;border:none;border-radius:50%;background:#E0564B;color:#fff;cursor:pointer;display:none;font-size:.8rem;line-height:1}
+.sig .grip{position:absolute;right:-6px;bottom:-6px;width:13px;height:13px;background:#2F3A1D;border-radius:3px;cursor:nwse-resize;display:none}
+.sig:hover .del,.sig:hover .grip{display:block}
+.sig-palette{display:flex;flex-wrap:wrap;gap:8px}
+.sig-thumb{width:90px;border:2px dashed var(--ink-mute);border-radius:12px;padding:6px;background:var(--paper);cursor:grab}
+.sig-thumb:hover{border-color:#CFFF74}
+.sig-thumb img{width:100%;height:40px;object-fit:contain;pointer-events:none}
+.pdf-empty{border:2px dashed var(--ink-mute);border-radius:var(--radius-md);padding:30px;text-align:center;font-weight:600;color:var(--ink-mute);background:var(--paper)}
 
 /* ---------- SCROLL REVEAL ---------- */
 .reveal{opacity:0;transform:translateY(26px);transition:opacity .6s cubic-bezier(.2,.8,.3,1),transform .6s cubic-bezier(.2,.8,.3,1)}
@@ -844,122 +851,199 @@ const TOOLS = [
       };
     }},
 
-  { id:'ttd-pdf', name:'Tanda Tangan PDF', desc:'Upload PDF + TTD PNG, geser posisinya.', icon:svg.pen,
+{ id:'ttd-pdf', name:'Tanda Tangan PDF', desc:'Upload PDF + TTD PNG, geser & resize di halaman.', icon:svg.pen,
     body:`<div class="row">
             <input type="file" id="fp" accept="application/pdf" hidden>
-            <input type="file" id="ft" accept="image/png,image/jpeg" hidden>
-            <div class="drop" id="dp">Upload PDF<small>File dokumen</small></div>
-            <div class="drop" id="dt">Upload TTD<small>PNG background transparan</small></div>
+            <input type="file" id="ft" accept="image/png,image/jpeg" multiple hidden>
+            <div class="drop" id="dp">Upload PDF<small>Dokumen yang mau ditandatangani</small></div>
+            <div class="drop" id="dt">Upload TTD<small>PNG transparan, boleh beberapa</small></div>
           </div>
-          <div class="row">
-            <div class="field"><label>Halaman PDF</label><input type="text" id="pg" value="1" /></div>
-            <div class="field"><label>Ukuran TTD</label><input type="range" id="size" min="8" max="140" value="38" /></div>
-          </div>
-          <div class="field"><label>Opasitas TTD</label><input type="range" id="op" min="10" max="100" value="100" /></div>
-          <div class="stage" id="stage"><canvas id="cv"></canvas><img id="sig" alt="" class="off" /></div>
-          <p class="hint">Geser tanda tangan langsung di halaman. Klik "Simpan" untuk mengunduh PDF bertanda tangan.</p>
-          <button class="btn btn-block" id="go" disabled>Simpan PDF Bertanda Tangan</button>`,
+          <div class="field"><label>Tanda tangan</label><div class="sig-palette" id="pal"></div></div>
+          <p class="hint">Seret kartu TTD ke halaman PDF, atau klik untuk menempel otomatis. Tanda tangan bisa digeser, diperkecil (pojok kanan bawah), dan dihapus.</p>
+          <div class="ttd-scroll" id="scroll"><div class="pdf-empty" id="empty">Upload PDF untuk menampilkan halaman.</div></div>
+          <button class="btn btn-block" id="go" disabled>Unduh PDF Bertanda Tangan</button>`,
     init(){
-      const fp=$('#fp'), ft=$('#ft'), stage=$('#stage'), cv=$('#cv'), sig=$('#sig');
-      let pageW=1, pdfDoc=null, sigSrc=null, pos={x:0,y:0}, sw=0;
+      const fp=$('#fp'), ft=$('#ft'), scroll=$('#scroll'), pal=$('#pal');
+      let pdfBytes=null, pdfName='dokumen', pageCount=0, sigs=[], placements=[], uid=0;
 
-      const draw = ()=>{
-        if(!sigSrc) return;
-        sig.style.transform = `translate(${pos.x}px,${pos.y}px) scale(${sw})`;
-      };
-      const showStage = ()=>{ if(cv.width) stage.classList.add('on'); };
-
+      // ===== upload PDF =====
       bindDrop($('#dp'), fp, async files=>{
         const file=files[0]; if(!file) return;
         busy(true,'Membaca PDF...');
         try{
-          const buf = await readFileAs(file,'arrayBuffer');
-          pdfDoc = await pdfjsLib.getDocument({data:buf}).promise;
-          $('#pg').max = pdfDoc.numPages;
-          await renderPage(Number($('#pg').value)||1);
-          busy(false); toast(`PDF dimuat (${pdfDoc.numPages} halaman)`);
-        }catch(e){ busy(false); toast('Gagal membaca PDF'); }
+          pdfName = file.name.replace(/\.pdf$/i,'');
+          pdfBytes = new Uint8Array(await file.arrayBuffer());
+          placements = [];
+          await renderPdf();
+          busy(false);
+          $('#go').disabled = !placements.length;
+          toast(`PDF dimuat (${pageCount} halaman)`);
+        }catch(e){ busy(false); toast('Gagal membaca PDF'); console.error(e); }
       });
 
-      bindDrop($('#dt'), ft, async files=>{
-        const file=files[0]; if(!file) return;
-        sigSrc = await readFileAs(file);
-        const img = new Image();
-        img.onload = ()=>{
-          sig.src = sigSrc;
-          sig.classList.remove('off');
-          sw = Number($('#size').value) / Math.max(img.width,1) * stage.clientWidth;
-          pos = { x: stage.clientWidth*0.3, y: Math.max(10, cv.height*0.7) };
-          draw(); $('#go').disabled = false;
-        };
-        img.src = sigSrc;
-      });
-
-      async function renderPage(n){
-        if(!pdfDoc) return;
-        const page = await pdfDoc.getPage(Math.min(Math.max(n,1), pdfDoc.numPages));
-        const vp = page.getViewport({scale:2});
-        cv.width = vp.width; cv.height = vp.height;
-        await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
-        showStage();
-        if(sigSrc){
-          const r = cv.getBoundingClientRect();
-          const k = r.width / cv.width;
-          pos.x = Math.min(pos.x, r.width*0.6);
-          pos.y = Math.min(pos.y, r.height*0.8);
-          sw = Number($('#size').value)/100 * r.width / (sig.naturalWidth*k||1);
-          draw();
+      async function renderPdf(){
+        const pdf = await pdfjsLib.getDocument({data:pdfBytes.slice()}).promise;
+        pageCount = pdf.numPages;
+        scroll.innerHTML='';
+        const dpr = window.devicePixelRatio||1;
+        const W = Math.min(scroll.clientWidth||640, 680);
+        for(let i=1;i<=pageCount;i++){
+          const page = await pdf.getPage(i);
+          const base = page.getViewport({scale:1});
+          const vp = page.getViewport({scale:(W*dpr)/base.width});
+          const wrap = document.createElement('div');
+          wrap.className='page'; wrap.dataset.page=i;
+          const cv = document.createElement('canvas');
+          cv.width=vp.width; cv.height=vp.height;
+          wrap.appendChild(cv);
+          scroll.appendChild(wrap);
+          await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
         }
+        renderPlacements();
       }
 
-      $('#pg').onchange = ()=> renderPage(Number($('#pg').value)||1);
-      $('#size').oninput = e=>{
-        const r = cv.getBoundingClientRect();
-        const k = r.width / cv.width;
-        sw = Number(e.target.value)/100 * r.width / Math.max(sig.naturalWidth*k,1);
-        draw();
-      };
-      $('#op').oninput = e=> sig.style.opacity = e.target.value/100;
-
-      // drag & drop tanda tangan
-      let dragging=false;
-      const startDrag = e=>{
-        if(!sigSrc) return;
-        dragging = true; sig.classList.add('drag');
-        sig.setPointerCapture(e.pointerId); e.preventDefault();
-      };
-      sig.addEventListener('pointerdown', startDrag);
-      sig.addEventListener('pointermove', e=>{
-        if(!dragging) return;
-        const r = stage.getBoundingClientRect();
-        pos.x = Math.min(Math.max(0, e.clientX-r.left), r.width);
-        pos.y  = Math.min(Math.max(0, e.clientY-r.top), r.height);
-        draw();
+      // ===== daftar TTD =====
+      bindDrop($('#dt'), ft, files=>{
+        [...files].forEach(f=>{
+          const r=new FileReader();
+          r.onload=()=>addSig(f.name, r.result);
+          r.readAsDataURL(f);
+        });
       });
-      const stopDrag = ()=>{ dragging=false; sig.classList.remove('drag'); };
-      sig.addEventListener('pointerup', stopDrag);
-      sig.addEventListener('pointercancel', stopDrag);
-      window.addEventListener('resize', ()=>{ if(sigSrc){ showStage(); $('#size').dispatchEvent(new Event('input')); } }, { once:true });
+      function addSig(name, src){
+        const img=new Image();
+        img.onload=()=>{
+          sigs.push({name, src, ratio: img.naturalHeight/img.naturalWidth});
+          renderSigs();
+        };
+        img.src=src;
+      }
+      function renderSigs(){
+        pal.innerHTML='';
+        if(!sigs.length){ pal.innerHTML='<span class="hint">Belum ada TTD. Upload dulu di atas.</span>'; return; }
+        sigs.forEach((s,i)=>{
+          const d=document.createElement('div');
+          d.className='sig-thumb'; d.draggable=true; d.title=s.name;
+          d.innerHTML='<img alt="">';
+          d.querySelector('img').src=s.src;
+          d.addEventListener('dragstart', e=>e.dataTransfer.setData('text/plain', String(i)));
+          d.addEventListener('click', ()=> placeVisible(s));
+          pal.appendChild(d);
+        });
+      }
+      renderSigs();
 
-      $('#go').onclick = ()=>{
-        if(!pdfDoc || !sigSrc) return toast('Upload PDF dan TTD dulu');
-        busy(true,'Menyimpan PDF...');
-        const w = cv.width, h = cv.height;
-        const k = w / cv.getBoundingClientRect().width;
-        const out = document.createElement('canvas');
-        out.width = w; out.height = h;
-        const ctx = out.getContext('2d');
-        ctx.drawImage(cv, 0, 0);
-        ctx.globalAlpha = Number($('#op').value)/100;
-        const nw = sw*k, nh = (sig.naturalHeight/sig.naturalWidth)*nw;
-        ctx.drawImage(sig, pos.x*k, pos.y*k, nw, nh);
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({orientation: w>h?'landscape':'portrait', unit:'px', format:[w,h], hotfixes:['px_scaling']});
-        pdf.addImage(out.toDataURL('image/jpeg', .92), 'JPEG', 0, 0, w, h);
-        const name = `ttd_${Date.now()}.pdf`;
-        pdf.save(name);
-        historyPush('Tanda Tangan PDF', name); busy(false);
-        showResult('PDF bertanda tangan: '+name);
+      // ===== penempatan =====
+      const pagesOf = ()=> [...scroll.querySelectorAll('.page')];
+      const hFrac = (s,w,r)=> w * s.ratio * r.width / r.height;
+      const clamp = (v,a,b)=> Math.max(a, Math.min(b,v));
+
+      function placeVisible(s){
+        const pages = pagesOf();
+        if(!pages.length) return toast('Upload PDF dulu');
+        const mid = scroll.getBoundingClientRect().top + scroll.clientHeight/2;
+        const target = pages.find(p=>p.getBoundingClientRect().bottom > mid) || pages[0];
+        const r = target.getBoundingClientRect();
+        const w=.22, h=hFrac(s,w,r);
+        addPlacement(+target.dataset.page, clamp(.62,0,1-w), clamp(.78,0,1-h), w, s.src);
+      }
+      scroll.addEventListener('dragover', e=>{ e.preventDefault(); });
+      scroll.addEventListener('drop', e=>{
+        e.preventDefault();
+        const wrap = e.target.closest('.page');
+        const s = sigs[+e.dataTransfer.getData('text/plain')];
+        if(!wrap || !s) return;
+        const r = wrap.getBoundingClientRect();
+        const w=.22, h=hFrac(s,w,r);
+        addPlacement(+wrap.dataset.page,
+          clamp((e.clientX-r.left)/r.width - w/2, 0, 1-w),
+          clamp((e.clientY-r.top)/r.height - h/2, 0, 1-h), w, s.src);
+      });
+
+      function addPlacement(page,x,y,w,src){
+        placements.push({id:++uid, page, x, y, w, src});
+        renderPlacements();
+        $('#go').disabled = false;
+      }
+      function renderPlacements(){
+        scroll.querySelectorAll('.sig').forEach(el=>el.remove());
+        placements.forEach(p=>{
+          const wrap = scroll.querySelector(`.page[data-page="${p.page}"]`);
+          if(wrap) wrap.appendChild(sigEl(p, wrap));
+        });
+      }
+
+      function sigEl(p, wrap){
+        const el = document.createElement('div');
+        el.className='sig';
+        el.style.left = p.x*100+'%';
+        el.style.top = p.y*100+'%';
+        el.style.width = p.w*100+'%';
+        el.innerHTML='<img alt="" draggable="false"><button class="del" title="Hapus">&times;</button><span class="grip"></span>';
+        el.querySelector('img').src = p.src;
+
+        el.querySelector('.del').addEventListener('click', e=>{
+          e.stopPropagation();
+          placements = placements.filter(q=>q.id!==p.id);
+          el.remove();
+          $('#go').disabled = !placements.length;
+        });
+
+        el.addEventListener('pointerdown', e=>{
+          if(e.target.classList.contains('del')) return;
+          e.preventDefault();
+          el.setPointerCapture(e.pointerId);
+          const r = wrap.getBoundingClientRect();
+          const resize = e.target.classList.contains('grip');
+          const sx=e.clientX, sy=e.clientY, ox=p.x, oy=p.y, ow=p.w;
+          const move = ev=>{
+            const dx=(ev.clientX-sx)/r.width, dy=(ev.clientY-sy)/r.height;
+            if(resize){
+              p.w = clamp(ow+dx, .03, 1-p.x);
+              el.style.width = p.w*100+'%';
+            }else{
+              p.x = clamp(ox+dx, 0, 1-p.w);
+              p.y = clamp(oy+dy, 0, 1 - el.offsetHeight/r.height);
+              el.style.left = p.x*100+'%';
+              el.style.top = p.y*100+'%';
+            }
+          };
+          const up = ()=>{
+            el.removeEventListener('pointermove', move);
+            el.removeEventListener('pointerup', up);
+          };
+          el.addEventListener('pointermove', move);
+          el.addEventListener('pointerup', up);
+        });
+        return el;
+      }
+
+      // ===== simpan PDF (pdf-lib, teks tetap asli) =====
+      $('#go').onclick = async ()=>{
+        if(!pdfBytes || !placements.length) return toast('Upload PDF dan taruh TTD dulu');
+        busy(true,'Menyusun PDF...');
+        try{
+          const doc = await PDFLib.PDFDocument.load(pdfBytes, {ignoreEncryption:true});
+          const pages = doc.getPages();
+          const cache = {};
+          for(const p of placements){
+            const page = pages[p.page-1];
+            if(!page) continue;
+            const { width:W, height:H } = page.getSize();
+            if(!cache[p.src]){
+              const buf = new Uint8Array(await (await fetch(p.src)).arrayBuffer());
+              cache[p.src] = buf[0]===0x89 ? await doc.embedPng(buf) : await doc.embedJpg(buf);
+            }
+            const img = cache[p.src];
+            const w = p.w*W, h = w*img.height/img.width;
+            page.drawImage(img, { x:p.x*W, y:H - p.y*H - h, width:w, height:h });
+          }
+          const name = `${pdfName}-signed.pdf`;
+          saveBlob(new Blob([await doc.save()],{type:'application/pdf'}), name);
+          historyPush('Tanda Tangan PDF', name);
+          busy(false);
+          showResult('PDF bertanda tangan: '+name);
+        }catch(e){ busy(false); toast('Gagal menyimpan PDF'); console.error(e); }
       };
     }},
 
