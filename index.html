@@ -123,17 +123,67 @@ a.btn-ghost{color:#2F3A1D}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
 .card{
   position:relative;background:var(--paper);border-radius:var(--radius-lg);padding:26px 24px;
-  cursor:pointer;text-align:left;border:2px solid transparent;transition:.22s;box-shadow:0 10px 30px -20px rgba(47,58,29,.5);
+  cursor:pointer;text-align:left;border:2px solid transparent;transition:transform .18s,box-shadow .22s,border-color .22s;
+  box-shadow:0 10px 30px -20px rgba(47,58,29,.5);
   display:flex;flex-direction:column;gap:14px;font-family:inherit;color:var(--ink);
+  transform-style:preserve-3d;will-change:transform;
 }
-.card:hover{transform:translateY(-4px);border-color:#CFFF74;box-shadow:var(--shadow)}
-.card-ico{width:46px;height:46px;border-radius:14px;background:#CFFF74;display:grid;place-items:center}
+.card::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;
+  background:linear-gradient(115deg,transparent 35%,rgba(207,255,116,.55) 50%,transparent 65%);
+  background-size:220% 100%;background-position:150% 0;transition:opacity .2s;
+}
+.card:hover::after{opacity:1;animation:sweep .85s ease}
+@keyframes sweep{from{background-position:170% 0}to{background-position:-70% 0}}
+.card:hover{border-color:#CFFF74;box-shadow:var(--shadow)}
+.card-ico{width:46px;height:46px;border-radius:14px;background:#CFFF74;display:grid;place-items:center;transition:.25s}
+.card:hover .card-ico{transform:scale(1.1) rotate(-6deg)}
 .card-ico svg{width:22px;height:22px}
 .card h3{font-size:1.06rem;font-weight:800;letter-spacing:-.02em}
 .card p{color:var(--ink-mute);font-size:.88rem;font-weight:500}
 .card-go{margin-top:auto;display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:.85rem;color:var(--ink)}
 .empty{text-align:center;padding:50px 20px;color:var(--ink-mute);font-weight:600;display:none}
 
+/* ---------- SCROLL REVEAL ---------- */
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .6s cubic-bezier(.2,.8,.3,1),transform .6s cubic-bezier(.2,.8,.3,1)}
+.reveal.in{opacity:1;transform:none}
+
+/* ---------- MARQUEE ---------- */
+.marquee{
+  margin-top:14px;border-radius:var(--radius-lg);background:var(--ink);overflow:hidden;
+  padding:16px 0;user-select:none;
+}
+.marquee-track{display:flex;gap:14px;width:max-content;animation:slide 26s linear infinite}
+.marquee:hover .marquee-track{animation-play-state:paused}
+.chip{
+  display:inline-flex;align-items:center;gap:8px;background:rgba(207,255,116,.12);
+  border:1px solid rgba(207,255,116,.28);color:#CFFF74;font-weight:700;font-size:.82rem;
+  padding:9px 18px;border-radius:var(--radius-pill);white-space:nowrap;
+}
+.chip b{opacity:.55;font-weight:600}
+@keyframes slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ---------- STATS ---------- */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
+.stat{background:var(--paper);border-radius:var(--radius-lg);padding:26px 24px;box-shadow:0 10px 30px -20px rgba(47,58,29,.5)}
+.stat b{display:block;font-size:clamp(1.7rem,3.4vw,2.4rem);font-weight:800;letter-spacing:-.04em;color:var(--ink)}
+.stat span{font-size:.8rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-mute)}
+
+/* ---------- SUCCESS ---------- */
+.done{
+  position:fixed;inset:0;z-index:150;display:none;align-items:center;justify-content:center;pointer-events:none;
+}
+.done.on{display:flex}
+.done-badge{
+  background:#2F3A1D;color:#CFFF74;border-radius:26px;padding:26px 34px;display:flex;align-items:center;gap:16px;
+  box-shadow:0 30px 60px -20px rgba(0,0,0,.6);animation:badge .5s cubic-bezier(.2,1.2,.4,1);
+}
+@keyframes badge{from{transform:scale(.6) translateY(20px);opacity:0}to{transform:none;opacity:1}}
+.done-ring{width:44px;height:44px;border-radius:50%;background:#CFFF74;color:#2F3A1D;display:grid;place-items:center;flex:none}
+.done-ring svg{width:22px;height:22px;stroke-dasharray:40;stroke-dashoffset:40;animation:draw .45s .12s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.done-text b{display:block;font-weight:800;font-size:1rem}
+.done-text span{opacity:.7;font-size:.85rem;font-weight:500}
 /* ---------- HISTORY ---------- */
 .history{background:#2F3A1D;color:#CFFF74;border-radius:var(--radius-xl);padding:34px 32px;margin-top:64px}
 .history h2{font-size:1.3rem;letter-spacing:-.02em;font-weight:800}
@@ -266,6 +316,7 @@ footer strong{color:var(--ink);font-weight:700}
   .palette{grid-template-columns:1fr}
   .nav-links a:not(.btn){display:none}
   .row{grid-template-columns:1fr}
+  .stats{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -289,7 +340,7 @@ footer strong{color:var(--ink);font-weight:700}
 </nav>
 
 <header class="wrap">
-  <section class="hero">
+  <section class="hero reveal">
     <div class="hero-in">
       <div class="hero-copy">
         <span class="eyebrow">100% Gratis &amp; Lokal</span>
@@ -323,13 +374,23 @@ footer strong{color:var(--ink);font-weight:700}
       <span>HEX: #2F3A1D</span>
       <span class="swatch-tag">Tema Terpilih</span>
     </button>
-    <p class="hint" style="grid-column:1/-1;text-align:center">Klik salah satu kartu di atas untuk berganti tema terang / gelap.</p>
+<p class="hint" style="grid-column:1/-1;text-align:center">Klik salah satu kartu di atas untuk berganti tema terang / gelap.</p>
   </section>
-</header>
+
+  <div class="marquee" id="marquee">
+    <div class="marquee-track" id="mTrack"></div>
+  </div>
+
+  <section class="stats">
+    <div class="stat reveal"><b data-count="10">0</b><span>Tools Konversi</span></div>
+    <div class="stat reveal"><b data-count="6">0</b><span>Format Didukung</span></div>
+    <div class="stat reveal"><b data-count="100" data-suffix="%">0</b><span>Gratis &amp; Lokal</span></div>
+  </section>
+  </header>
 
 <main class="wrap">
   <section id="tools">
-    <div class="section-head">
+    <div class="section-head reveal">
       <div>
         <h2>Semua Tools</h2>
         <p>Pilih tool yang kamu butuh, langsung jalan di browser.</p>
@@ -343,7 +404,7 @@ footer strong{color:var(--ink);font-weight:700}
     <p class="empty" id="empty">Tool tidak ditemukan. Coba kata kunci lain.</p>
   </section>
 
-  <section class="history" id="riwayat">
+  <section class="history reveal" id="riwayat">
     <h2>Riwayat File</h2>
     <p>Disimpan di localStorage perangkat kamu — tidak ada yang dikirim ke server.</p>
     <ul class="hist-list" id="histList"></ul>
@@ -369,6 +430,15 @@ footer strong{color:var(--ink);font-weight:700}
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div class="done" id="done">
+  <div class="done-badge">
+    <span class="done-ring">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#2F3A1D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 5 5L20 7"/></svg>
+    </span>
+    <span class="done-text"><b>File siap diunduh</b><span>Selesai diproses di perangkat kamu</span></span>
+  </div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -437,8 +507,13 @@ function historyPush(tool, name){
   const h = JSON.parse(localStorage.getItem('toolHistory')||'[]');
   h.unshift({ tool, name, at: new Date().toLocaleString('id-ID') });
   localStorage.setItem('toolHistory', JSON.stringify(h.slice(0,40)));
-setTheme(localStorage.getItem('theme') || 'light');
-renderHistory();
+  renderHistory();
+  celebrate();
+}
+function celebrate(){
+  const d = $('#done');
+  d.classList.remove('on'); void d.offsetWidth; d.classList.add('on');
+  clearTimeout(d._t); d._t = setTimeout(()=>d.classList.remove('on'), 1900);
 }
 function renderHistory(){
   const h = JSON.parse(localStorage.getItem('toolHistory')||'[]');
@@ -841,6 +916,60 @@ function closeTool(){
 $('#sheetClose').onclick = closeTool;
 modal.addEventListener('click', e=>{ if(e.target===modal) closeTool(); });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape' && modal.classList.contains('open')) closeTool(); });
+
+/* =========================================================
+   MARQUEE
+   ========================================================= */
+const FORMATS = [
+  ['PDF','Document'], ['JPG','Image'], ['PNG','Image'], ['ZIP','Archive'],
+  ['TXT','Text'], ['HTML','Web'], ['DOCX','Document'], ['CSV','Data']
+];
+const chips = FORMATS.map(([f,k])=>`<span class="chip">${f} <b>${k}</b></span>`).join('');
+$('#mTrack').innerHTML = chips + chips;
+
+/* =========================================================
+   SCROLL REVEAL + COUNT UP
+   ========================================================= */
+const io = new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(!e.isIntersecting) return;
+    e.target.classList.add('in');
+    e.target.querySelectorAll?.('[data-count]').forEach(countUp);
+    if(e.target.dataset.count) countUp(e.target);
+    io.unobserve(e.target);
+  });
+}, { threshold:.18 });
+document.querySelectorAll('.reveal').forEach((el,i)=>{
+  el.style.transitionDelay = (i%4)*90 + 'ms';
+  io.observe(el);
+});
+
+function countUp(el){
+  if(el._done) return; el._done = true;
+  const end = Number(el.dataset.count);
+  const suffix = el.dataset.suffix || '';
+  const dur = 1200; const t0 = performance.now();
+  const step = now=>{
+    const p = Math.min((now-t0)/dur, 1);
+    const eased = 1 - Math.pow(1-p, 3);
+    el.textContent = Math.round(end*eased) + suffix;
+    if(p<1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+/* =========================================================
+   CARD TILT 3D
+   ========================================================= */
+grid.querySelectorAll('.card').forEach(card=>{
+  card.addEventListener('mousemove', e=>{
+    const r = card.getBoundingClientRect();
+    const x = (e.clientX-r.left)/r.width - .5;
+    const y = (e.clientY-r.top)/r.height - .5;
+    card.style.transform = `perspective(700px) rotateX(${-y*7}deg) rotateY(${x*7}deg) translateY(-4px)`;
+  });
+  card.addEventListener('mouseleave', ()=> card.style.transform = '');
+});
 
 /* =========================================================
    THEME SWITCHER
