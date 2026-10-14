@@ -1,63 +1,70 @@
-# 🔄 File Converter Tools – HTML & JS
+# 🌱 Tumbuhin — Tool Konversi File
 
-Proyek ini berisi kumpulan tools konversi berbagai format file berbasis **HTML + JavaScript**, yang berfungsi 100% secara **client-side** (tanpa server). Dirancang modular, ringan, dan dapat diakses langsung melalui browser.
+Kumpulan tool konversi file dalam **satu halaman HTML**, berbasis **HTML + JavaScript** 100% client-side (tanpa server, tanpa backend, tanpa upload ke mana pun).
+
+Tema warna: **Warm Lime `#CFFF74`** + **Olive Ink `#2F3A1D`**.
 
 ---
 
-## 🎯 Fitur Utama
+## 🎯 Fitur
 
-- ✅ TXT ke PDF (`txttopdf.html`)
-- ✅ HTML ke PDF (`htmltopdf.html`)
-- ✅ JPG ke PDF (`jpgtopdf.html`)
-- ✅ Multi JPG ke PDF (`multijpgtopdf.html`)
-- ✅ JPG ↔ PNG (`jpgtopng.html`)
-- ✅ PDF ke JPG (`pdftojpg.html`)
-- ✅ PDF ke PNG (`pdftopng.html`)
-- ✅ Extract Teks dari PDF (`txttopdf.html` → versi extractor)
+Semua tool dibuka lewat satu dashboard (tanpa berpindah halaman):
 
-Semua converter dilengkapi:
-- Antarmuka interaktif dan responsif
-- Tombol kembali ke `index.html`
-- Animasi loading selama proses
-- Penyimpanan nama file ke `localStorage`
-- Fungsi unduh langsung (tanpa server)
+| Tool | Keterangan |
+| --- | --- |
+| TXT ke PDF | Tempel teks, simpan jadi PDF A4 |
+| HTML ke PDF | Render kode HTML jadi PDF |
+| JPG ke PDF | Satu gambar jadi satu halaman PDF |
+| Multi JPG ke PDF | Gabung banyak gambar, atur urutan (drag & drop) |
+| PDF ke JPG | Render halaman PDF jadi JPG/PNG |
+| JPG ke PNG | Konversi format gambar |
+| PDF ke PNG | Halaman PDF jadi gambar PNG |
+| Extract Teks PDF | Ambil teks dari PDF, salin / unduh `.txt` |
+| Gabung PDF | Satukan beberapa PDF, atur urutan |
+| Kompresor ZIP | Gabung & kompres file jadi satu ZIP |
+
+Fitur pendukung:
+
+- 🔍 Pencarian tool
+- 📤 Upload via klik maupun drag & drop
+- 🧾 Riwayat file tersimpan di `localStorage`
+- 📱 Responsif (mobile friendly)
+- ⌨️ Modal tool dengan tombol `Esc` untuk menutup
+
+---
+
+## 🚀 Cara Menggunakan
+
+Buka `index.html` di browser modern, lalu pilih tool yang dibutuhkan.
 
 ---
 
 ## 📁 Struktur Folder
 
 ```plaintext
-/ (root)
-├── index.html
-├── txttopdf.html
-├── htmltopdf.html
-├── jpgtopdf.html
-├── multijpgtopdf.html
-├── pdftojpg.html
-├── pdftopng.html
-├── jpgtopng.html
-├── /tools/ (opsional untuk script modular)
+/
+├── index.html   # satu-satunya file aplikasi
 └── README.md
-🚀 Cara Menggunakan
-Buka index.html di browser modern
+```
 
-Pilih jenis konversi sesuai kebutuhan
+---
 
-Upload file dan klik tombol konversi
+## 📌 Catatan
 
-Unduh hasil langsung atau simpan ke perangkat
+Semua tool berjalan sepenuhnya di browser — tidak ada data yang dikirim ke server.
 
-Klik “⬅️ Kembali ke Index” untuk kembali ke dashboard
-
-📌 Catatan
-Semua tool dijalankan di browser, tidak ada data dikirim ke server.
-
-Untuk konversi Word, Excel, PowerPoint, dll mungkin butuh API tambahan.
+Untuk konversi Word, Excel, PowerPoint, dll. mungkin butuh library tambahan.
 
 Proyek ini dapat dikembangkan menjadi PWA atau aplikasi desktop berbasis Electron.
 
-🧑‍💻 Author
-Mohamad Akhirudin Website/Portfolio: [Link kamu di sini] Email: [Email kamu opsional]
+---
 
-🛠️ Lisensi
-Lisensi bebas digunakan dan dimodifikasi. Kredit tetap disarankan saat publikasi ulang.
+## 🧑‍💻 Author
+
+Mohamad Akhirudin
+
+---
+
+## 🛠️ Lisensi
+
+Bebas digunakan dan dimodifikasi. Kredit tetap disarankan saat publikasi ulang.
