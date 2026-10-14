@@ -203,12 +203,45 @@ textarea:focus,input[type=text]:focus,select:focus{border-color:var(--lime-deep)
 .preview-box{background:var(--paper);border-radius:var(--radius-md);padding:14px;text-align:center}
 .preview-box canvas,.preview-box img{max-height:280px;margin:0 auto;border-radius:10px}
 .hint{font-size:.82rem;color:var(--ink-mute);font-weight:500}
-.spinner{
-  width:26px;height:26px;border:3px solid rgba(47,58,29,.2);border-top-color:#2F3A1D;
-  border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 8px;
+/* ---------- LOADER AGV ---------- */
+.loader{display:none;flex-direction:column;align-items:center;gap:12px;padding:14px 0}
+.loader.on{display:flex}
+.track{
+  position:relative;width:100%;max-width:330px;height:80px;background:var(--paper);
+  border-radius:18px;overflow:hidden;
 }
+.track::before{
+  content:"";position:absolute;left:10px;right:10px;bottom:16px;height:2px;
+  background:repeating-linear-gradient(90deg,rgba(47,58,29,.35) 0 12px,transparent 12px 24px);
+}
+.agv{position:absolute;bottom:18px;left:0;width:74px;height:46px;animation:drive 2.6s linear infinite}
+.agv-box{
+  position:absolute;top:0;left:6px;width:26px;height:20px;background:#CFFF74;
+  border:2px solid #2F3A1D;border-radius:4px;animation:bump 1.3s ease-in-out infinite;
+}
+.agv-box.b2{left:36px;animation-delay:.18s}
+.agv-body{
+  position:absolute;bottom:0;left:4px;width:66px;height:22px;background:#2F3A1D;border-radius:7px 7px 5px 5px;
+}
+.agv-body::after{
+  content:"";position:absolute;right:7px;top:5px;width:14px;height:8px;background:#CFFF74;border-radius:3px;opacity:.9;
+}
+.agv-wheel{
+  position:absolute;bottom:-4px;width:13px;height:13px;background:#2F3A1D;border:3px solid #CFFF74;
+  border-radius:50%;animation:spin .6s linear infinite;
+}
+.agv-wheel.w1{left:11px}
+.agv-wheel.w2{left:44px}
+.beam{
+  position:absolute;bottom:4px;left:-26px;width:26px;height:3px;background:#CFFF74;border-radius:2px;
+  animation:beam 2.6s linear infinite;
+}
+@keyframes drive{0%{left:-80px}100%{left:calc(100% - 4px)}}
+@keyframes bump{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes beam{0%{opacity:.9;transform:scaleX(.3)}70%{opacity:.25}100%{opacity:0;transform:scaleX(2.2)}}
+.loader span{font-size:.85rem;font-weight:700;color:var(--ink-mute)}
 @keyframes spin{to{transform:rotate(360deg)}}
-.loading{display:none;flex-direction:column;align-items:center;gap:8px;padding:10px}
+.loading{display:none;flex-direction:column;align-items:center;padding:10px}
 .loading.on{display:flex}
 .result{display:none;background:#2F3A1D;color:#CFFF74;border-radius:var(--radius-md);padding:14px 16px;font-size:.86rem;font-weight:600}
 .result.on{display:block}
@@ -366,7 +399,16 @@ function busy(on, msg='Memproses...'){
   if(!el){
     el = document.createElement('div');
     el.className = 'loading';
-    el.innerHTML = '<div class="spinner"></div><span></span>';
+    el.innerHTML = `<div class="track">
+        <div class="agv">
+          <div class="beam"></div>
+          <div class="agv-box"></div>
+          <div class="agv-box b2"></div>
+          <div class="agv-body"></div>
+          <div class="agv-wheel w1"></div>
+          <div class="agv-wheel w2"></div>
+        </div>
+      </div><span></span>`;
     sheetBody.appendChild(el);
   }
   el.querySelector('span').textContent = msg;
