@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Tumbuhin â€” Tool Konversi File</title>
+<title>Tumbuhin — Tool Konversi File</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -463,7 +463,7 @@ footer strong{color:var(--ink);font-weight:700}
 
   <section class="history reveal" id="riwayat">
     <h2>Riwayat File</h2>
-    <p>Disimpan di localStorage perangkat kamu â€” tidak ada yang dikirim ke server.</p>
+    <p>Disimpan di localStorage perangkat kamu — tidak ada yang dikirim ke server.</p>
     <ul class="hist-list" id="histList"></ul>
     <button class="hist-clear" id="histClear">Bersihkan Riwayat</button>
   </section>
@@ -880,7 +880,7 @@ const TOOLS = [
         files.forEach(file=>{
           const row=document.createElement('div');
           row.className='sort-item';
-          row.innerHTML=`<span class="grip">â‰¡</span><span></span><small>${(file.size/1024).toFixed(0)} KB</small><button title="Hapus">&times;</button>`;
+          row.innerHTML=`<span class="grip">≡</span><span></span><small>${(file.size/1024).toFixed(0)} KB</small><button title="Hapus">&times;</button>`;
           row.querySelector('span:nth-child(2)').textContent = file.name;
           row.querySelector('button').onclick=()=>{ row.remove(); files=files.filter(x=>x!==file); $('#go').disabled=files.length<2; };
           list.appendChild(row);
@@ -1305,17 +1305,54 @@ const TOOLS = [
             <button class="btn" id="go">Unduh</button>
           </div>
           <div class="field" style="display:none" id="aiBox">
-            <label>Mode AI (opsional, sekali unduh ±22 MB)</label>
+            <label>Mode AI <span id="aiState" class="hint" style="float:right">memeriksa koneksi...</span></label>
             <button class="btn btn-ghost btn-block" id="ai">Hapus background dengan AI</button>
-            <p class="hint" style="margin-top:8px">Cocok untuk rambut &amp; objek rumit. Memerlukan koneksi internet saat pertama kali dipakai.</p>
+            <label class="hint" style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer">
+              <input type="checkbox" id="autoAi" style="width:auto;accent-color:#CFFF74" />
+              Otomatis pakai AI begitu online (sekali unduh model ±22 MB)
+            </label>
+            <p class="hint" style="margin-top:8px">Offline? Mode warna (chroma key) tetap bisa dipakai, hasilnya sama persis.</p>
           </div>`,
     init(){
       const f=$('#f'), cv=$('#cv'), ctx=cv.getContext('2d',{willReadFrequently:true});
-      let src=null, key=null;
+      const AI_URL='https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm';
+      let src=null, key=null, aiReady=false, aiBusy=false;
+
+      // ===== status online / offline =====
+      function setAI(ready){
+        aiReady = ready;
+        const st=$('#aiState'), btn=$('#ai');
+        if(!$('#aiBox') || $('#aiBox').style.display==='none') return;
+        if(ready){
+          st.textContent = 'online — tersedia';
+          st.style.color = '';
+          btn.disabled = false;
+          btn.textContent = 'Hapus background dengan AI';
+        }else{
+          st.textContent = 'offline — pakai mode warna';
+          st.style.color = '#C0552F';
+          btn.disabled = true;
+          btn.textContent = 'AI tidak tersedia (offline)';
+        }
+      }
+      async function checkOnline(){
+        if(!navigator.onLine){ setAI(false); return; }
+        try{
+          const ctrl = new AbortController();
+          const t = setTimeout(()=>ctrl.abort(), 5000);
+          await fetch(AI_URL, {method:'HEAD', mode:'cors', cache:'no-store', signal:ctrl.signal});
+          clearTimeout(t);
+          setAI(true);
+        }catch(e){ setAI(false); }
+      }
+      window.addEventListener('online', checkOnline);
+      window.addEventListener('offline', ()=> setAI(false));
 
       bindDrop($('#d'), f, async files=>{
         const file=files[0]; if(!file) return;
         $('#aiBox').style.display='block';
+        setAI(navigator.onLine ? aiReady : false);
+        checkOnline();
         const dataUrl = await readFileAs(file);
         const img = new Image();
         img.onload = ()=>{
@@ -1415,7 +1452,7 @@ const TOOLS = [
             src.width=cv.width; src.height=cv.height;
             src.getContext('2d').drawImage(img,0,0);
             busy(false); btn.disabled=false;
-            toast('Selesai —INI hasil AI, bisa langsung diunduh');
+            toast('Selesai — ini hasil AI, bisa langsung diunduh');
           };
           img.src = URL.createObjectURL(outBlob);
         }catch(e){
@@ -1423,7 +1460,49 @@ const TOOLS = [
           console.error('[RemoveBG AI]', e);
           toast('Mode AI gagal: ' + (e && e.message ? e.message : 'cek koneksi'));
         }
+        finally{ aiBusy=false; }
       };
+      $('#ai').onclick = ()=> runAI();
+
+      async function runAI(){
+        if(!src) return toast('Upload gambar dulu');
+        if(!aiReady) return toast('Tidak ada koneksi — pakai mode warna');
+        if(aiBusy) return;
+        aiBusy=true;
+        const btn = $('#ai');
+        btn.disabled = true;
+        busy(true,'Menyiapkan model AI (sekali saja)...');
+        try{
+          const imgBlob = await new Promise(res=>src.toBlob(res,'image/png'));
+          const mod = await import(AI_URL);
+          const outBlob = await mod.removeBackground(imgBlob, {
+            model: 'isnet_quint8',
+            output: { format:'image/png', quality:0.9 },
+            progress: (k, cur, total)=>{
+              const pct = total ? Math.round(cur/total*100) : 0;
+              busy(true, `${k} ${pct ? pct+'%' : ''}`);
+            }
+          });
+          const img = new Image();
+          img.onload = ()=>{
+            cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+            ctx.clearRect(0,0,cv.width,cv.height);
+            ctx.drawImage(img,0,0);
+            src = document.createElement('canvas');
+            src.width=cv.width; src.height=cv.height;
+            src.getContext('2d').drawImage(img,0,0);
+            busy(false); btn.disabled=false; aiBusy=false;
+            toast('Selesai — ini hasil AI, bisa langsung diunduh');
+          };
+          img.src = URL.createObjectURL(outBlob);
+        }catch(e){
+          busy(false); btn.disabled=false; aiBusy=false;
+          console.error('[RemoveBG AI]', e);
+          toast('Mode AI gagal: ' + (e && e.message ? e.message : 'cek koneksi'));
+        }
+        if($('#autoAi').checked && aiBusy){ aiBusy=false; $('#ai').click(); }
+      };
+      checkOnline();
     }},
 
   { id:'zip', name:'Kompresor ZIP', desc:'Gabung & kompres banyak file jadi satu ZIP.', icon:svg.zip,
@@ -1439,7 +1518,7 @@ const TOOLS = [
         files.forEach(file=>{
           const row=document.createElement('div');
           row.className='sort-item';
-          row.innerHTML=`<span class="grip">â‰¡</span><span></span><small>${(file.size/1024).toFixed(1)} KB</small><button title="Hapus">&times;</button>`;
+          row.innerHTML=`<span class="grip">≡</span><span></span><small>${(file.size/1024).toFixed(1)} KB</small><button title="Hapus">&times;</button>`;
           row.querySelector('span:nth-child(2)').textContent = file.name;
           row.querySelector('button').onclick=()=>{ row.remove(); files=files.filter(x=>x!==file); $('#go').disabled=!files.length; };
           list.appendChild(row);
