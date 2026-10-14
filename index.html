@@ -1303,6 +1303,11 @@ const TOOLS = [
           <div class="row" id="btns" style="display:none">
             <select id="mode"><option value="png">PNG transparan</option><option value="jpg">JPG (latar putih)</option></select>
             <button class="btn" id="go">Unduh</button>
+          </div>
+          <div class="field" style="display:none" id="aiBox">
+            <label>Mode AI (opsional, sekali unduh ±22 MB)</label>
+            <button class="btn btn-ghost btn-block" id="ai">Hapus background dengan AI</button>
+            <p class="hint" style="margin-top:8px">Cocok untuk rambut &amp; objek rumit. Memerlukan koneksi internet saat pertama kali dipakai.</p>
           </div>`,
     init(){
       const f=$('#f'), cv=$('#cv'), ctx=cv.getContext('2d',{willReadFrequently:true});
@@ -1310,6 +1315,7 @@ const TOOLS = [
 
       bindDrop($('#d'), f, async files=>{
         const file=files[0]; if(!file) return;
+        $('#aiBox').style.display='block';
         const dataUrl = await readFileAs(file);
         const img = new Image();
         img.onload = ()=>{
@@ -1381,6 +1387,42 @@ const TOOLS = [
         }
         historyPush('Remove Background', `background_${Date.now()}.${mode}`);
         showResult('Berkas berhasil dibuat');
+      };
+
+      // ===== mode AI (model diunduh dari CDN saat dibutuhkan) =====
+      $('#ai').onclick = async ()=>{
+        if(!src) return toast('Upload gambar dulu');
+        const btn = $('#ai');
+        btn.disabled = true;
+        busy(true,'Menyiapkan model AI (sekali saja)...');
+        try{
+          const imgBlob = await new Promise(res=>src.toBlob(res,'image/png'));
+          const mod = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm');
+          const outBlob = await mod.removeBackground(imgBlob, {
+            model: 'isnet_quint8',
+            output: { format:'image/png', quality:0.9 },
+            progress: (key, cur, total)=>{
+              const pct = total ? Math.round(cur/total*100) : 0;
+              busy(true, `${key} ${pct ? pct+'%' : ''}`);
+            }
+          });
+          const img = new Image();
+          img.onload = ()=>{
+            cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+            ctx.clearRect(0,0,cv.width,cv.height);
+            ctx.drawImage(img,0,0);
+            src = document.createElement('canvas');
+            src.width=cv.width; src.height=cv.height;
+            src.getContext('2d').drawImage(img,0,0);
+            busy(false); btn.disabled=false;
+            toast('Selesai —INI hasil AI, bisa langsung diunduh');
+          };
+          img.src = URL.createObjectURL(outBlob);
+        }catch(e){
+          busy(false); btn.disabled=false;
+          console.error('[RemoveBG AI]', e);
+          toast('Mode AI gagal: ' + (e && e.message ? e.message : 'cek koneksi'));
+        }
       };
     }},
 
