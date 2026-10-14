@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Tumbuhin — Tool Konversi File</title>
+<title>Tumbuhin â€” Tool Konversi File</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -422,7 +422,7 @@ footer strong{color:var(--ink);font-weight:700}
 
   <section class="history reveal" id="riwayat">
     <h2>Riwayat File</h2>
-    <p>Disimpan di localStorage perangkat kamu — tidak ada yang dikirim ke server.</p>
+    <p>Disimpan di localStorage perangkat kamu â€” tidak ada yang dikirim ke server.</p>
     <ul class="hist-list" id="histList"></ul>
     <button class="hist-clear" id="histClear">Bersihkan Riwayat</button>
   </section>
@@ -458,7 +458,7 @@ footer strong{color:var(--ink);font-weight:700}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.162/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -824,7 +824,7 @@ const TOOLS = [
         files.forEach(file=>{
           const row=document.createElement('div');
           row.className='sort-item';
-          row.innerHTML=`<span class="grip">≡</span><span></span><small>${(file.size/1024).toFixed(0)} KB</small><button title="Hapus">&times;</button>`;
+          row.innerHTML=`<span class="grip">â‰¡</span><span></span><small>${(file.size/1024).toFixed(0)} KB</small><button title="Hapus">&times;</button>`;
           row.querySelector('span:nth-child(2)').textContent = file.name;
           row.querySelector('button').onclick=()=>{ row.remove(); files=files.filter(x=>x!==file); $('#go').disabled=files.length<2; };
           list.appendChild(row);
@@ -878,11 +878,15 @@ const TOOLS = [
           busy(false);
           $('#go').disabled = !placements.length;
           toast(`PDF dimuat (${pageCount} halaman)`);
-        }catch(e){ busy(false); toast('Gagal membaca PDF'); console.error(e); }
+        }catch(e){
+          busy(false); fp.value='';
+          console.error('[TTD] gagal baca PDF:', e);
+          toast('Gagal membaca PDF: ' + (e && e.message ? e.message : 'error tidak diketahui'));
+        }
       });
 
       async function renderPdf(){
-        const pdf = await pdfjsLib.getDocument({data:pdfBytes.slice()}).promise;
+        const pdf = await loadPdf(pdfBytes);
         pageCount = pdf.numPages;
         scroll.innerHTML='';
         const dpr = window.devicePixelRatio||1;
@@ -900,6 +904,18 @@ const TOOLS = [
           await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
         }
         renderPlacements();
+      }
+
+      // worker kadaluarsa / diblokir -> coba lagi tanpa worker
+      async function loadPdf(bytes){
+        if(!window.pdfjsLib) throw new Error('Library pdf.js gagal dimuat, cek koneksi internet');
+        const copy = bytes.slice();
+        try{
+          return await pdfjsLib.getDocument({data:copy}).promise;
+        }catch(err){
+          console.warn('[TTD] worker gagal, coba tanpa worker:', err);
+          return await pdfjsLib.getDocument({data:bytes.slice(), disableWorker:true}).promise;
+        }
       }
 
       // ===== daftar TTD =====
@@ -1060,7 +1076,7 @@ const TOOLS = [
         files.forEach(file=>{
           const row=document.createElement('div');
           row.className='sort-item';
-          row.innerHTML=`<span class="grip">≡</span><span></span><small>${(file.size/1024).toFixed(1)} KB</small><button title="Hapus">&times;</button>`;
+          row.innerHTML=`<span class="grip">â‰¡</span><span></span><small>${(file.size/1024).toFixed(1)} KB</small><button title="Hapus">&times;</button>`;
           row.querySelector('span:nth-child(2)').textContent = file.name;
           row.querySelector('button').onclick=()=>{ row.remove(); files=files.filter(x=>x!==file); $('#go').disabled=!files.length; };
           list.appendChild(row);
@@ -1200,7 +1216,7 @@ document.querySelectorAll('.swatch').forEach(s=> s.addEventListener('click', ()=
 /* =========================================================
    INIT
    ========================================================= */
-if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.162/pdf.worker.min.js';
+if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 $('#year').textContent = new Date().getFullYear();
 renderHistory();
 </script>
