@@ -144,6 +144,23 @@ a.btn-ghost{color:#2F3A1D}
 .card-go{margin-top:auto;display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:.85rem;color:var(--ink)}
 .empty{text-align:center;padding:50px 20px;color:var(--ink-mute);font-weight:600;display:none}
 
+/* ---------- GABUNG PDF + GAMBAR ---------- */
+.mix-list{list-style:none;display:flex;flex-direction:column;gap:8px;width:100%;max-width:640px;margin:0 auto}
+.mix-item{
+  display:flex;align-items:center;gap:12px;background:var(--paper);border-radius:14px;padding:10px 14px;
+  cursor:grab;box-shadow:0 6px 16px -14px rgba(47,58,29,.6);
+}
+.mix-item .grip{color:var(--ink-mute);font-weight:800;font-size:1.1rem;cursor:grab}
+.mix-item img{width:34px;height:44px;object-fit:cover;border-radius:6px;flex:none}
+.mix-badge{
+  width:34px;height:44px;border-radius:6px;background:#2F3A1D;color:#CFFF74;flex:none;
+  display:grid;place-items:center;font-size:.66rem;font-weight:800;letter-spacing:.06em;
+}
+.mix-item .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.9rem;font-weight:600}
+.mix-item small{color:var(--ink-mute);font-weight:600;font-size:.76rem}
+.mix-item button{background:transparent;border:none;color:var(--ink-mute);cursor:pointer;font-size:1.05rem;line-height:1;padding:2px 6px;border-radius:8px}
+.mix-item button:hover{background:rgba(224,86,75,.15);color:#E0564B}
+
 /* ---------- FULL VIEW (Tanda Tangan) ---------- */
 .fullview{position:fixed;inset:0;z-index:110;background:var(--bg);display:none;flex-direction:column}
 .fullview.open{display:flex}
@@ -422,7 +439,7 @@ footer strong{color:var(--ink);font-weight:700}
   </div>
 
   <section class="stats">
-    <div class="stat reveal"><b data-count="11">0</b><span>Tools Konversi</span></div>
+    <div class="stat reveal"><b data-count="12">0</b><span>Tools Konversi</span></div>
     <div class="stat reveal"><b data-count="6">0</b><span>Format Didukung</span></div>
     <div class="stat reveal"><b data-count="100" data-suffix="%">0</b><span>Gratis &amp; Lokal</span></div>
   </section>
@@ -1151,6 +1168,120 @@ const TOOLS = [
           showResult('PDF bertanda tangan: '+name);
         }catch(e){ busy(false); toast('Gagal menyimpan PDF'); console.error(e); }
       };
+    }},
+
+  { id:'mix-pdf', name:'PDF + Gambar ke PDF', desc:'Urutkan PDF & gambar, gabung jadi satu PDF.', icon:svg.stack, full:true,
+    body:`<aside class="fv-side">
+            <section>
+              <h4>1 &middot; File</h4>
+              <input type="file" id="f" accept="application/pdf,image/jpeg,image/png" multiple hidden>
+              <div class="drop" id="d">Upload PDF / Gambar<small>Bisa campur, boleh beberapa</small></div>
+              <button class="btn btn-sm btn-block" id="clear" style="margin-top:10px">Kosongkan</button>
+            </section>
+            <section>
+              <h4>2 &middot; Ukuran halaman gambar</h4>
+              <select id="size">
+                <option value="auto">Ikuti ukuran gambar</option>
+                <option value="a4">A4</option>
+                <option value="letter">Letter</option>
+              </select>
+              <p class="hint" style="margin-top:10px">Halaman dari file PDF tidak diubah, hasilnya persis seperti aslinya.</p>
+            </section>
+            <section>
+              <h4>3 &middot; Urutan</h4>
+              <p class="hint">Seret untuk mengurutkan. Tanda <b>&equiv;</b> menandai file PDF.</p>
+            </section>
+          </aside>
+          <div class="fv-main">
+            <div class="pdf-empty" id="empty">Upload PDF atau gambar untuk mulai.<br><small>Urutan di sidebar menentukan urutan halaman di PDF hasil.</small></div>
+            <ul class="mix-list" id="list" hidden></ul>
+          </div>`,
+    init(){
+      const f=$('#f'), list=$('#list'), empty=$('#empty'), goBtn=$('#fvGo');
+      $('#fvDesc').textContent = 'Gabung & urutkan PDF dan gambar jadi satu file';
+      $('#fvGo').textContent = 'Unduh PDF Gabungan';
+      let items=[];   // {name, type, file, thumb}
+
+      bindDrop($('#d'), f, files=>{
+        [...files].forEach(add);
+        f.value='';
+      });
+      function add(file){
+        const it = { name:file.name, size:file.size, type:file.type, file, thumb:null };
+        if(file.type.startsWith('image/')){
+          it.thumb = URL.createObjectURL(file);
+        }
+        items.push(it);
+        render();
+      }
+      function render(){
+        list.hidden = !items.length;
+        empty.hidden = !!items.length;
+        list.innerHTML='';
+        items.forEach(it=>{
+          const li=document.createElement('li');
+          li.className='mix-item';
+          li.innerHTML = `<span class="grip">&equiv;</span>
+            ${it.thumb?`<img src="${it.thumb}" alt="">`:'<span class="mix-badge">PDF</span>'}
+            <span class="name"></span>
+            <small>${(it.size/1024).toFixed(0)} KB</small>
+            <button title="Hapus">&times;</button>`;
+          li.querySelector('.name').textContent = it.name;
+          li.querySelector('button').onclick = ()=>{
+            items = items.filter(x=>x!==it);
+            if(it.thumb) URL.revokeObjectURL(it.thumb);
+            render();
+          };
+          list.appendChild(li);
+        });
+        new Sortable(list, {animation:150, onEnd:()=>{
+          items = [...list.children].map(li=>items.find(x=>li.querySelector('.name').textContent===x.name)).filter(Boolean);
+        }});
+        goBtn.disabled = !items.length;
+      }
+
+      $('#clear').onclick = ()=>{
+        items.forEach(it=> it.thumb && URL.revokeObjectURL(it.thumb));
+        items=[]; render();
+      };
+
+      goBtn.onclick = async ()=>{
+        if(!items.length) return toast('Upload file dulu');
+        busy(true,'Menyusun PDF...');
+        try{
+          const out = await PDFLib.PDFDocument.create();
+          const sizeKey = $('#size').value;
+          for(const it of items){
+            if(it.file.type === 'application/pdf'){
+              const src = await PDFLib.PDFDocument.load(await it.file.arrayBuffer(), {ignoreEncryption:true});
+              const pages = await out.copyPages(src, src.getPageIndices());
+              pages.forEach(p=>out.addPage(p));
+            }else{
+              const buf = new Uint8Array(await it.file.arrayBuffer());
+              const img = buf[0]===0x89 ? await out.embedPng(buf) : await out.embedJpg(buf);
+              const w = img.width, h = img.height;
+              let page;
+              if(sizeKey==='auto'){
+                page = out.addPage([w, h]);
+              }else{
+                page = out.addPage(sizeKey==='a4' ? [595.28, 841.89] : [612, 792]);
+                const pw = page.getWidth(), ph = page.getHeight();
+                const k = Math.min(pw/w, ph/h);
+                const nw = w*k, nh = h*k;
+                page.drawImage(img, { x:(pw-nw)/2, y:(ph-nh)/2, width:nw, height:nh });
+                continue;
+              }
+              page.drawImage(img, { x:0, y:0, width:w, height:h });
+            }
+          }
+          const name = `gabungan_${items.length}_file_${Date.now()}.pdf`;
+          saveBlob(new Blob([await out.save()],{type:'application/pdf'}), name);
+          historyPush('PDF + Gambar ke PDF', name);
+          busy(false);
+          showResult(`PDF gabungan berhasil: ${name} (${out.getPageCount()} halaman)`);
+        }catch(e){ busy(false); toast('Gagal menyusun PDF'); console.error(e); }
+      };
+      render();
     }},
 
   { id:'zip', name:'Kompresor ZIP', desc:'Gabung & kompres banyak file jadi satu ZIP.', icon:svg.zip,
