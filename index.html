@@ -144,9 +144,33 @@ a.btn-ghost{color:#2F3A1D}
 .card-go{margin-top:auto;display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:.85rem;color:var(--ink)}
 .empty{text-align:center;padding:50px 20px;color:var(--ink-mute);font-weight:600;display:none}
 
+/* ---------- FULL VIEW (Tanda Tangan) ---------- */
+.fullview{position:fixed;inset:0;z-index:110;background:var(--bg);display:none;flex-direction:column}
+.fullview.open{display:flex}
+.fv-head{
+  display:flex;align-items:center;gap:14px;padding:14px 22px;flex-wrap:wrap;
+  background:#CFFF74;color:#2F3A1D;border-bottom:2px solid rgba(47,58,29,.14);
+}
+.fv-head b{font-size:1.1rem;font-weight:800;letter-spacing:-.02em}
+.fv-head span{display:block;font-size:.82rem;font-weight:600;color:#4A5A33}
+.fv-back{background:#2F3A1D;color:#CFFF74;border:none;padding:11px 20px;border-radius:var(--radius-pill);font-weight:700;cursor:pointer;font-size:.9rem;transition:.2s}
+.fv-back:hover{transform:translateX(-3px)}
+.fv-go{margin-left:auto}
+.fv-body{flex:1;min-height:0;display:grid;grid-template-columns:310px 1fr}
+.fv-side{border-right:1px solid rgba(47,58,29,.14);overflow:auto;padding:22px;display:flex;flex-direction:column;gap:24px;background:var(--paper)}
+.fv-side h4{font-size:.78rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-mute);margin-bottom:10px}
+.fv-side .drop{padding:22px 16px}
+.fv-main{overflow:auto;padding:22px}
+.fv-pages{display:flex;flex-direction:column;align-items:center;gap:16px}
+.preset-list{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.preset-list li{display:flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid rgba(47,58,29,.16);border-radius:12px;font-size:.85rem;font-weight:600}
+.preset-list .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.preset-list button{font-size:.74rem;padding:4px 10px;border:none;background:rgba(47,58,29,.08);color:var(--ink);border-radius:999px;cursor:pointer;font-weight:700}
+.preset-list button:hover{background:#CFFF74}
+@media(max-width:820px){.fv-body{grid-template-columns:1fr}.fv-side{border-right:none;border-bottom:1px solid rgba(47,58,29,.14)}}
+
 /* ---------- TANDATANGAN ---------- */
-.ttd-scroll{max-height:52vh;overflow:auto;padding:2px}
-.page{position:relative;background:#fff;border-radius:12px;overflow:hidden;margin:0 auto 14px;box-shadow:0 6px 18px rgba(0,0,0,.14);width:100%}
+.page{position:relative;background:#fff;border-radius:12px;overflow:hidden;margin:0 auto 16px;box-shadow:0 6px 18px rgba(0,0,0,.14);width:100%;flex:none}
 .page canvas{display:block;width:100%;height:auto}
 .sig{position:absolute;cursor:grab;touch-action:none;user-select:none;border:1px dashed transparent}
 .sig:hover,.sig:active{border-color:#CFFF74}
@@ -445,6 +469,18 @@ footer strong{color:var(--ink);font-weight:700}
   </div>
 </div>
 
+<div class="fullview" id="full">
+  <div class="fv-head">
+    <button class="fv-back" id="fvBack">&larr; Kembali</button>
+    <div>
+      <b id="fvTitle"></b>
+      <span id="fvDesc"></span>
+    </div>
+    <button class="btn fv-go" id="fvGo" disabled>Unduh PDF Bertanda Tangan</button>
+  </div>
+  <div class="fv-body" id="fullBody"></div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <div class="done" id="done">
@@ -473,6 +509,8 @@ const C = { lime:'#CFFF74', ink:'#2F3A1D' };
    ========================================================= */
 const $ = s => document.querySelector(s);
 const modal = $('#modal'), sheetBody = $('#sheetBody');
+const fullview = $('#full'), fullBody = $('#fullBody');
+let panel = sheetBody;
 const state = {};
 
 function toast(msg){
@@ -481,7 +519,7 @@ function toast(msg){
   clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove('on'), 2600);
 }
 function busy(on, msg='Memproses...'){
-  let el = sheetBody.querySelector('.loading');
+  let el = panel.querySelector('.loading');
   if(!el){
     el = document.createElement('div');
     el.className = 'loading';
@@ -495,17 +533,17 @@ function busy(on, msg='Memproses...'){
           <div class="agv-wheel w2"></div>
         </div>
       </div><span></span>`;
-    sheetBody.appendChild(el);
+    panel.appendChild(el);
   }
   el.querySelector('span').textContent = msg;
   el.classList.toggle('on', on);
 }
 function showResult(msg){
-  let el = sheetBody.querySelector('.result');
+  let el = panel.querySelector('.result');
   if(!el){
     el = document.createElement('div');
     el.className = 'result';
-    sheetBody.appendChild(el);
+    panel.appendChild(el);
   }
   el.textContent = msg; el.classList.add('on');
 }
@@ -851,20 +889,39 @@ const TOOLS = [
       };
     }},
 
-{ id:'ttd-pdf', name:'Tanda Tangan PDF', desc:'Upload PDF + TTD PNG, geser & resize di halaman.', icon:svg.pen,
-    body:`<div class="row">
-            <input type="file" id="fp" accept="application/pdf" hidden>
-            <input type="file" id="ft" accept="image/png,image/jpeg" multiple hidden>
-            <div class="drop" id="dp">Upload PDF<small>Dokumen yang mau ditandatangani</small></div>
-            <div class="drop" id="dt">Upload TTD<small>PNG transparan, boleh beberapa</small></div>
-          </div>
-          <div class="field"><label>Tanda tangan</label><div class="sig-palette" id="pal"></div></div>
-          <p class="hint">Seret kartu TTD ke halaman PDF, atau klik untuk menempel otomatis. Tanda tangan bisa digeser, diperkecil (pojok kanan bawah), dan dihapus.</p>
-          <div class="ttd-scroll" id="scroll"><div class="pdf-empty" id="empty">Upload PDF untuk menampilkan halaman.</div></div>
-          <button class="btn btn-block" id="go" disabled>Unduh PDF Bertanda Tangan</button>`,
+{ id:'ttd-pdf', name:'Tanda Tangan PDF', desc:'Upload PDF + TTD PNG, geser & resize di halaman.', icon:svg.pen, full:true,
+    body:`<aside class="fv-side">
+            <section>
+              <h4>1 &middot; Dokumen</h4>
+              <input type="file" id="fp" accept="application/pdf" hidden>
+              <div class="drop" id="dp">Upload PDF<small>Dokumen yang mau ditandatangani</small></div>
+            </section>
+            <section>
+              <h4>2 &middot; Tanda tangan</h4>
+              <input type="file" id="ft" accept="image/png,image/jpeg" multiple hidden>
+              <div class="drop" id="dt">Upload TTD<small>PNG transparan, boleh beberapa</small></div>
+              <div class="sig-palette" id="pal" style="margin-top:12px"></div>
+              <p class="hint" style="margin-top:10px">Seret kartu TTD ke halaman, atau klik untuk menempel otomatis.</p>
+            </section>
+            <section>
+              <h4>3 &middot; Preset posisi</h4>
+              <div class="row">
+                <input type="text" id="presetName" placeholder="mis. Surat kontrak" />
+                <button class="btn btn-sm" id="savePreset">Simpan</button>
+              </div>
+              <ul class="preset-list" id="presetList"></ul>
+            </section>
+          </aside>
+          <div class="fv-main">
+            <div class="pdf-empty" id="empty">Upload PDF untuk menampilkan halaman.<br><small>Tanda tangan bisa digeser, diperkecil (pojok kanan bawah), dan dihapus.</small></div>
+            <div class="fv-pages" id="scroll" hidden></div>
+          </div>`,
     init(){
-      const fp=$('#fp'), ft=$('#ft'), scroll=$('#scroll'), pal=$('#pal');
+      const fp=$('#fp'), ft=$('#ft'), scroll=$('#scroll'), pal=$('#pal'), goBtn=$('#fvGo');
+      const PRESET_KEY='ttd-presets-v1';
       let pdfBytes=null, pdfName='dokumen', pageCount=0, sigs=[], placements=[], uid=0;
+
+      const clamp=(v,a,b)=> Math.max(a, Math.min(b,v));
 
       // ===== upload PDF =====
       bindDrop($('#dp'), fp, async files=>{
@@ -876,7 +933,8 @@ const TOOLS = [
           placements = [];
           await renderPdf();
           busy(false);
-          $('#go').disabled = !placements.length;
+          goBtn.disabled = !placements.length;
+          $('#fvDesc').textContent = `${pdfName} · ${pageCount} halaman`;
           toast(`PDF dimuat (${pageCount} halaman)`);
         }catch(e){
           busy(false); fp.value='';
@@ -888,9 +946,9 @@ const TOOLS = [
       async function renderPdf(){
         const pdf = await loadPdf(pdfBytes);
         pageCount = pdf.numPages;
-        scroll.innerHTML='';
+        scroll.innerHTML=''; scroll.hidden=false; $('#empty').hidden=true;
         const dpr = window.devicePixelRatio||1;
-        const W = Math.min(scroll.clientWidth||640, 680);
+        const W = Math.min(scroll.clientWidth||720, 860);
         for(let i=1;i<=pageCount;i++){
           const page = await pdf.getPage(i);
           const base = page.getViewport({scale:1});
@@ -906,12 +964,10 @@ const TOOLS = [
         renderPlacements();
       }
 
-      // worker kadaluarsa / diblokir -> coba lagi tanpa worker
       async function loadPdf(bytes){
         if(!window.pdfjsLib) throw new Error('Library pdf.js gagal dimuat, cek koneksi internet');
-        const copy = bytes.slice();
         try{
-          return await pdfjsLib.getDocument({data:copy}).promise;
+          return await pdfjsLib.getDocument({data:bytes.slice()}).promise;
         }catch(err){
           console.warn('[TTD] worker gagal, coba tanpa worker:', err);
           return await pdfjsLib.getDocument({data:bytes.slice(), disableWorker:true}).promise;
@@ -928,15 +984,12 @@ const TOOLS = [
       });
       function addSig(name, src){
         const img=new Image();
-        img.onload=()=>{
-          sigs.push({name, src, ratio: img.naturalHeight/img.naturalWidth});
-          renderSigs();
-        };
+        img.onload=()=>{ sigs.push({name, src, ratio:img.naturalHeight/img.naturalWidth}); renderSigs(); };
         img.src=src;
       }
       function renderSigs(){
         pal.innerHTML='';
-        if(!sigs.length){ pal.innerHTML='<span class="hint">Belum ada TTD. Upload dulu di atas.</span>'; return; }
+        if(!sigs.length){ pal.innerHTML='<span class="hint">Belum ada TTD.</span>'; return; }
         sigs.forEach((s,i)=>{
           const d=document.createElement('div');
           d.className='sig-thumb'; d.draggable=true; d.title=s.name;
@@ -952,12 +1005,12 @@ const TOOLS = [
       // ===== penempatan =====
       const pagesOf = ()=> [...scroll.querySelectorAll('.page')];
       const hFrac = (s,w,r)=> w * s.ratio * r.width / r.height;
-      const clamp = (v,a,b)=> Math.max(a, Math.min(b,v));
 
       function placeVisible(s){
         const pages = pagesOf();
         if(!pages.length) return toast('Upload PDF dulu');
-        const mid = scroll.getBoundingClientRect().top + scroll.clientHeight/2;
+        const main = scroll.closest('.fv-main');
+        const mid = main.getBoundingClientRect().top + main.clientHeight/2;
         const target = pages.find(p=>p.getBoundingClientRect().bottom > mid) || pages[0];
         const r = target.getBoundingClientRect();
         const w=.22, h=hFrac(s,w,r);
@@ -968,7 +1021,7 @@ const TOOLS = [
         e.preventDefault();
         const wrap = e.target.closest('.page');
         const s = sigs[+e.dataTransfer.getData('text/plain')];
-        if(!wrap || !s) return;
+        if(!wrap || !s) return toast('Upload PDF dulu');
         const r = wrap.getBoundingClientRect();
         const w=.22, h=hFrac(s,w,r);
         addPlacement(+wrap.dataset.page,
@@ -979,7 +1032,7 @@ const TOOLS = [
       function addPlacement(page,x,y,w,src){
         placements.push({id:++uid, page, x, y, w, src});
         renderPlacements();
-        $('#go').disabled = false;
+        goBtn.disabled = false;
       }
       function renderPlacements(){
         scroll.querySelectorAll('.sig').forEach(el=>el.remove());
@@ -988,23 +1041,18 @@ const TOOLS = [
           if(wrap) wrap.appendChild(sigEl(p, wrap));
         });
       }
-
       function sigEl(p, wrap){
         const el = document.createElement('div');
         el.className='sig';
-        el.style.left = p.x*100+'%';
-        el.style.top = p.y*100+'%';
-        el.style.width = p.w*100+'%';
+        el.style.left=p.x*100+'%'; el.style.top=p.y*100+'%'; el.style.width=p.w*100+'%';
         el.innerHTML='<img alt="" draggable="false"><button class="del" title="Hapus">&times;</button><span class="grip"></span>';
-        el.querySelector('img').src = p.src;
-
+        el.querySelector('img').src=p.src;
         el.querySelector('.del').addEventListener('click', e=>{
           e.stopPropagation();
           placements = placements.filter(q=>q.id!==p.id);
           el.remove();
-          $('#go').disabled = !placements.length;
+          goBtn.disabled = !placements.length;
         });
-
         el.addEventListener('pointerdown', e=>{
           if(e.target.classList.contains('del')) return;
           e.preventDefault();
@@ -1034,8 +1082,50 @@ const TOOLS = [
         return el;
       }
 
-      // ===== simpan PDF (pdf-lib, teks tetap asli) =====
-      $('#go').onclick = async ()=>{
+      // ===== preset =====
+      const loadPresets = ()=>{ try{ return JSON.parse(localStorage.getItem(PRESET_KEY))||[]; }catch{ return []; } };
+      function savePresets(list){
+        try{ localStorage.setItem(PRESET_KEY, JSON.stringify(list)); }
+        catch{ toast('Penyimpanan penuh — preset tidak tersimpan'); }
+      }
+      $('#savePreset').addEventListener('click', ()=>{
+        const name = $('#presetName').value.trim();
+        if(!name) return toast('Isi nama preset dulu');
+        if(!placements.length) return toast('Belum ada TTD di halaman');
+        const items = placements.map(({page,x,y,w,src})=> ({page,x,y,w,src}));
+        const list = loadPresets().filter(p=>p.name!==name);
+        list.push({name, items});
+        savePresets(list);
+        $('#presetName').value='';
+        renderPresets();
+        toast('Preset "'+name+'" disimpan');
+      });
+      function renderPresets(){
+        const ul=$('#presetList');
+        ul.innerHTML='';
+        loadPresets().forEach(p=>{
+          const li=document.createElement('li');
+          li.innerHTML='<span class="name"></span><button data-a="use">Pakai</button><button data-a="del">Hapus</button>';
+          li.querySelector('.name').textContent=`${p.name} (${p.items.length})`;
+          li.querySelector('[data-a=use]').onclick = ()=>{
+            if(!pageCount) return toast('Upload PDF dulu');
+            placements = p.items.map(it=>({...it, id:++uid, page: Math.min(it.page, pageCount)}));
+            renderPlacements();
+            goBtn.disabled = !placements.length;
+            toast('Preset "'+p.name+'" dipakai');
+          };
+          li.querySelector('[data-a=del]').onclick = ()=>{
+            savePresets(loadPresets().filter(q=>q.name!==p.name));
+            renderPresets();
+          };
+          ul.appendChild(li);
+        });
+        if(!ul.children.length) ul.innerHTML='<li style="border-style:dashed;justify-content:center;color:var(--ink-mute)">Belum ada preset</li>';
+      }
+      renderPresets();
+
+      // ===== simpan PDF =====
+      goBtn.onclick = async ()=>{
         if(!pdfBytes || !placements.length) return toast('Upload PDF dan taruh TTD dulu');
         busy(true,'Menyusun PDF...');
         try{
@@ -1129,6 +1219,8 @@ $('#search').addEventListener('input', e=>{
    MODAL
    ========================================================= */
 function openTool(tool){
+  if(tool.full){ openFull(tool); return; }
+  panel = sheetBody;
   $('#sheetTitle').textContent = tool.name;
   $('#sheetDesc').textContent = tool.desc;
   sheetBody.innerHTML = tool.body;
@@ -1142,9 +1234,29 @@ function closeTool(){
   sheetBody.innerHTML='';
   for(const k in state) delete state[k];
 }
+function openFull(tool){
+  $('#fvTitle').textContent = tool.name;
+  $('#fvDesc').textContent = tool.desc;
+  fullBody.innerHTML = tool.body;
+  panel = fullBody.querySelector('.fv-main') || fullBody;
+  fullview.classList.add('open');
+  document.body.style.overflow='hidden';
+  try{ tool.init(); }catch(e){ console.error(e); }
+}
+function closeFull(){
+  fullview.classList.remove('open');
+  document.body.style.overflow='';
+  fullBody.innerHTML='';
+  for(const k in state) delete state[k];
+}
 $('#sheetClose').onclick = closeTool;
 modal.addEventListener('click', e=>{ if(e.target===modal) closeTool(); });
-document.addEventListener('keydown', e=>{ if(e.key==='Escape' && modal.classList.contains('open')) closeTool(); });
+$('#fvBack').onclick = closeFull;
+document.addEventListener('keydown', e=>{
+  if(e.key!=='Escape') return;
+  if(fullview.classList.contains('open')) closeFull();
+  else if(modal.classList.contains('open')) closeTool();
+});
 
 /* =========================================================
    MARQUEE
