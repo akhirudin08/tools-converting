@@ -25,6 +25,14 @@ Semua tool dibuka lewat satu dashboard (tanpa berpindah halaman):
 | Tanda Tangan PDF | Upload PDF + TTD PNG, geser posisinya di halaman |
 | Kompresor ZIP | Gabung & kompres file jadi satu ZIP |
 | Remove Background | Hapus warna latar jadi PNG transparan |
+| Split Halaman PDF | Pilih halaman, simpan jadi PDF baru atau pisah per halaman (ZIP) |
+| Kompres & Resize Gambar | Perkecil ukuran + ubah format gambar, hasil ZIP |
+| Generator QR Code | Teks/URL jadi QR code PNG |
+| Watermark PDF | Watermark teks atau gambar, atur posisi & opasitas |
+| Putar Halaman PDF | Rotasi per halaman 90/180/270° |
+| Metadata PDF | Lihat & ubah Title, Author, Subject, Keywords |
+| Crop & Rotasi Gambar | Potong, putar, balik gambar |
+| Konversi Satuan | Panjang, berat, luas, volume, suhu, kecepatan, waktu, data |
 
 Fitur pendukung:
 

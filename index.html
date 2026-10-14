@@ -144,6 +144,33 @@ a.btn-ghost{color:#2F3A1D}
 .card-go{margin-top:auto;display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:.85rem;color:var(--ink)}
 .empty{text-align:center;padding:50px 20px;color:var(--ink-mute);font-weight:600;display:none}
 
+/* ---------- TOOL UMUM ---------- */
+.page-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;max-height:44vh;overflow:auto;padding:4px}
+.page-item{border:2px solid rgba(47,58,29,.14);border-radius:12px;overflow:hidden;cursor:pointer;background:var(--paper);position:relative;transition:.15s}
+.page-item:hover{border-color:#CFFF74}
+.page-item.on{border-color:#CFFF74;box-shadow:0 0 0 3px rgba(207,255,116,.45)}
+.page-item canvas,.page-item img{width:100%;display:block}
+.page-item b{position:absolute;top:4px;left:4px;background:#2F3A1D;color:#CFFF74;font-size:.68rem;padding:2px 7px;border-radius:6px;z-index:2}
+.page-item i{position:absolute;top:4px;right:4px;width:18px;height:18px;border-radius:50%;border:2px solid #2F3A1D;background:#fff;display:grid;place-items:center;font-size:.7rem;font-style:normal;z-index:2}
+.page-item.on i{background:#CFFF74}
+.row-list{list-style:none;display:flex;flex-direction:column;gap:8px;max-height:40vh;overflow:auto}
+.row-list li{display:flex;align-items:center;gap:10px;background:var(--paper);border-radius:12px;padding:10px 12px;font-size:.86rem;font-weight:600}
+.row-list li .n{width:26px;height:26px;border-radius:8px;background:rgba(207,255,116,.6);display:grid;place-items:center;font-size:.78rem;font-weight:800;flex:none}
+.row-list li .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row-list li .old{color:var(--ink-mute);font-weight:600;font-size:.78rem}
+.row-list li .new{color:#2F3A1D;background:rgba(207,255,116,.55);border-radius:8px;padding:2px 8px;font-size:.78rem;font-weight:800}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.qr-box{display:grid;place-items:center;padding:18px;background:var(--paper);border-radius:var(--radius-md);min-height:180px}
+.qr-box canvas{max-width:100%;image-rendering:pixelated}
+.meta-table{display:flex;flex-direction:column;gap:10px}
+.unit-out{background:#2F3A1D;color:#CFFF74;border-radius:var(--radius-md);padding:18px;text-align:center;font-weight:800;font-size:1.4rem;word-break:break-all}
+.conv-table{width:100%;border-collapse:collapse;font-size:.85rem;font-weight:600}
+.conv-table td{padding:8px 10px;border-bottom:1px solid rgba(47,58,29,.12)}
+.conv-table td:last-child{text-align:right;font-weight:800}
+.crop-stage{position:relative;background:#2F3A1D;border-radius:var(--radius-md);overflow:hidden;display:grid;place-items:center;padding:10px}
+.crop-stage canvas{display:block;max-width:100%;cursor:crosshair;touch-action:none}
+@media(max-width:600px){.grid2{grid-template-columns:1fr}}
+
 /* ---------- GABUNG PDF + GAMBAR ---------- */
 .mix-list{list-style:none;display:flex;flex-direction:column;gap:8px;width:100%;max-width:640px;margin:0 auto}
 .mix-item{
@@ -439,7 +466,7 @@ footer strong{color:var(--ink);font-weight:700}
   </div>
 
   <section class="stats">
-    <div class="stat reveal"><b data-count="13">0</b><span>Tools Konversi</span></div>
+    <div class="stat reveal"><b data-count="21">0</b><span>Tools Konversi</span></div>
     <div class="stat reveal"><b data-count="6">0</b><span>Format Didukung</span></div>
     <div class="stat reveal"><b data-count="100" data-suffix="%">0</b><span>Gratis &amp; Lokal</span></div>
   </section>
@@ -515,6 +542,7 @@ footer strong{color:var(--ink);font-weight:700}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 /* =========================================================
    THEME
@@ -629,7 +657,15 @@ const svg = {
   text:'<path d="M4 6h16M4 12h16M4 18h10"/>',
   png:'<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 15l5-5 4 4 3-3 6 6"/>',
   pen:'<path d="M3 21c3-1 4-4 4-6 0-3 6-10 9-10 2 0 3 1 3 3 0 3-7 9-10 9-2 0-5 1-6 4z"/><path d="m14 7 3 3"/>',
-  bg:'<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 15l5-5 4 4 3-3 6 6"/><path d="M3 4l18 16" stroke-dasharray="3 3"/>'
+  bg:'<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 15l5-5 4 4 3-3 6 6"/><path d="M3 4l18 16" stroke-dasharray="3 3"/>',
+  cut:'<circle cx="7" cy="7" r="3"/><circle cx="7" cy="17" r="3"/><path d="M20 4 8.5 15.5M20 20 8.5 8.5"/>',
+  shrink:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+  qr:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 8h3v3H8zM13 13h3v3h-3z"/><path d="M13 8h3M8 13h3"/>',
+  stamp:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 15h8M9 11h6"/>',
+  rotate:'<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 5v6h-6"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+  crop:'<path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/>',
+  ruler:'<rect x="2" y="8" width="20" height="8" rx="2"/><path d="M7 8v3M12 8v4M17 8v3"/>'
 };
 const icon = p => `<svg viewBox="0 0 24 24" fill="none" stroke="#2F3A1D" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 
@@ -1503,6 +1539,631 @@ const TOOLS = [
         if($('#autoAi').checked && aiBusy){ aiBusy=false; $('#ai').click(); }
       };
       checkOnline();
+    }},
+
+  { id:'split-pdf', name:'Split Halaman PDF', desc:'Pilih halaman, pisah jadi PDF baru.', icon:svg.cut,
+    body:`<input type="file" id="f" accept="application/pdf" hidden>
+          <div class="drop" id="d">Upload PDF<small>Klik halaman untuk pilih / batal pilih</small></div>
+          <div class="page-grid" id="grid" hidden></div>
+          <div class="row-list" id="sum" hidden></div>
+          <div class="grid2" style="display:none" id="acts">
+            <button class="btn" id="sel" disabled>Simpan Halaman Terpilih</button>
+            <button class="btn btn-ghost" id="per" disabled>Pisah Per Halaman (ZIP)</button>
+          </div>`,
+    init(){
+      const f=$('#f'), grid=$('#grid');
+      let bytes=null, numPages=0, sel=new Set();
+
+      bindDrop($('#d'), f, async files=>{
+        const file=files[0]; if(!file) return;
+        busy(true,'Membaca PDF...');
+        try{
+          bytes = new Uint8Array(await file.arrayBuffer());
+          await render(file);
+          busy(false);
+        }catch(e){ busy(false); f.value=''; toast('Gagal membaca PDF: '+e.message); }
+      });
+
+      async function render(file){
+        const pdf = await pdfjsLib.getDocument({data:bytes.slice()}).promise;
+        numPages = pdf.numPages;
+        grid.innerHTML=''; grid.hidden=false; $('#acts').style.display='grid';
+        sel = new Set();
+        for(let i=1;i<=numPages;i++){
+          sel.add(i);
+          const page = await pdf.getPage(i);
+          const base = page.getViewport({scale:1});
+          const vp = page.getViewport({scale:220*dpr()/base.width});
+          const item=document.createElement('div');
+          item.className='page-item on';
+          item.innerHTML='<b>'+i+'</b><i>&check;</i>';
+          const cv=document.createElement('canvas');
+          cv.width=vp.width; cv.height=vp.height;
+          item.appendChild(cv);
+          item.onclick=()=>{
+            if(sel.has(i)) sel.delete(i); else sel.add(i);
+            item.classList.toggle('on', sel.has(i));
+            update();
+          };
+          grid.appendChild(item);
+          await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+        }
+        update();
+      }
+      const dpr = ()=> window.devicePixelRatio||1;
+      function update(){
+        const pages=[...sel].sort((a,b)=>a-b);
+        $('#sum').hidden=false;
+        $('#sum').innerHTML='<li><span class="n">'+pages.length+'</span><span class="name">dari '+numPages+' halaman dipilih</span><button class="btn btn-sm" id="all">Pilih Semua</button><button class="btn btn-sm" id="none">Kosongkan</button></li>';
+        $('#all').onclick=()=>{ sel=new Set([...Array(numPages)].map((_,i)=>i+1)); render2(); };
+        $('#none').onclick=()=>{ sel.clear(); render2(); };
+        $('#sel').disabled = $('#per').disabled = !sel.size;
+      }
+      function render2(){ grid.querySelectorAll('.page-item').forEach(it=>{ const n=+it.querySelector('b').textContent; it.classList.toggle('on', sel.has(n)); }); update(); }
+
+      $('#sel').onclick = async ()=>{
+        busy(true,'Menyusun PDF...');
+        try{
+          const src = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption:true});
+          const out = await PDFLib.PDFDocument.create();
+          const pages = await out.copyPages(src, [...sel].map(i=>i-1));
+          pages.forEach(p=>out.addPage(p));
+          const name='halaman_terpilih.pdf';
+          saveBlob(new Blob([await out.save()],{type:'application/pdf'}), name);
+          historyPush('Split Halaman PDF', name); busy(false);
+          showResult('Tersimpan '+pages.length+' halaman: '+name);
+        }catch(e){ busy(false); toast('Gagal: '+e.message); }
+      };
+
+      $('#per').onclick = async ()=>{
+        busy(true,'Memisah per halaman...');
+        try{
+          const src = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption:true});
+          const zip = new JSZip();
+          for(const n of [...sel].sort((a,b)=>a-b)){
+            const one = await PDFLib.PDFDocument.create();
+            const [p] = await one.copyPages(src, [n-1]);
+            one.addPage(p);
+            zip.file(`halaman-${String(n).padStart(3,'0')}.pdf`, await one.save());
+          }
+          const name='pdf_terpisah.zip';
+          saveBlob(await zip.generateAsync({type:'blob',compression:'DEFLATE'}), name);
+          historyPush('Split Halaman PDF', name); busy(false);
+          showResult('ZIP berisi '+sel.size+' file PDF');
+        }catch(e){ busy(false); toast('Gagal: '+e.message); }
+      };
+    }},
+
+  { id:'img-opt', name:'Kompres & Resize Gambar', desc:'Perkecil ukuran gambar + ubah format.', icon:svg.shrink,
+    body:`<input type="file" id="f" accept="image/*" multiple hidden>
+          <div class="drop" id="d">Upload gambar<small>Bisa banyak sekaligus</small></div>
+          <div class="grid2">
+            <div class="field"><label>Lebar maksimal</label><select id="mw"><option value="0">Asli</option><option value="1920">1920 px</option><option value="1280" selected>1280 px</option><option value="800">800 px</option><option value="400">400 px</option></select></div>
+            <div class="field"><label>Format</label><select id="fmt"><option value="keep">Sama seperti asli</option><option value="image/jpeg">JPG</option><option value="image/webp">WEBP</option></select></div>
+          </div>
+          <div class="field"><label>Kualitas <span id="qVal" class="hint" style="float:right">80</span></label>
+            <input type="range" id="q" min="20" max="100" value="80" style="width:100%;accent-color:#CFFF74" /></div>
+          <ul class="row-list" id="list" hidden></ul>
+          <button class="btn btn-block" id="go" disabled>Proses &amp; Unduh ZIP</button>`,
+    init(){
+      const f=$('#f'), list=$('#list');
+      let files=[];
+      bindDrop($('#d'), f, fl=>{
+        files=[...files, ...fl]; f.value=''; render();
+      });
+      $('#q').oninput = e=> $('#qVal').textContent = e.target.value;
+      function render(){
+        list.hidden=!files.length;
+        list.innerHTML = files.map((x,i)=>'<li><span class="n">'+(i+1)+'</span><span class="name"></span><small>'+(x.size/1024).toFixed(0)+' KB</small><button title="Hapus">&times;</button></li>').join('');
+        [...list.children].forEach((li,i)=>{
+          li.querySelector('.name').textContent = files[i].name;
+          li.querySelector('button').onclick = ()=>{ files.splice(i,1); render(); };
+        });
+        $('#go').disabled = !files.length;
+      }
+      $('#go').onclick = async ()=>{
+        busy(true,'Memproses gambar...');
+        try{
+          const zip = new JSZip();
+          const maxW = Number($('#mw').value), q = Number($('#q').value)/100;
+          const fmtSel = $('#fmt').value;
+          let before=0, after=0;
+          for(const file of files){
+            before += file.size;
+            const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=URL.createObjectURL(file); });
+            const k = maxW && img.width>maxW ? maxW/img.width : 1;
+            const cv=document.createElement('canvas');
+            cv.width=Math.round(img.width*k); cv.height=Math.round(img.height*k);
+            const cx=cv.getContext('2d');
+            cx.fillStyle='#fff'; cx.fillRect(0,0,cv.width,cv.height);
+            cx.drawImage(img,0,0,cv.width,cv.height);
+            let type = fmtSel==='keep' ? (file.type||'image/jpeg') : fmtSel;
+            if(type==='image/png' && file.type!=='image/png') type='image/jpeg';
+            const blob = await new Promise(r=>cv.toBlob(r,type,q));
+            after += blob.size;
+            const ext = type.split('/')[1].replace('jpeg','jpg');
+            const base = file.name.replace(/\.[^.]+$/,'');
+            zip.file(base+'.'+ext, blob);
+          }
+          const name='gambar_dikompres.zip';
+          saveBlob(await zip.generateAsync({type:'blob',compression:'DEFLATE'}), name);
+          historyPush('Kompres & Resize Gambar', name);
+          busy(false);
+          const pct = before? Math.round((1-after/before)*100):0;
+          showResult(`ZIP selesai · hemat ${pct}% (${(before/1024/1024).toFixed(2)}MB → ${(after/1024/1024).toFixed(2)}MB)`);
+        }catch(e){ busy(false); toast('Gagal: '+e.message); }
+      };
+      render();
+    }},
+
+  { id:'qr-code', name:'Generator QR Code', desc:'Teks atau URL jadi QR code PNG.', icon:svg.qr,
+    body:`<div class="field"><label>Teks / URL</label><textarea id="txt" rows="3" placeholder="https://contoh.com"></textarea></div>
+          <div class="grid2">
+            <div class="field"><label>Ukuran (px)</label><select id="size"><option>128</option><option>256</option><option selected>512</option><option>1024</option></select></div>
+            <div class="field"><label>Margin</label><select id="margin"><option>0</option><option selected>2</option><option>4</option></select></div>
+          </div>
+          <div class="grid2">
+            <div class="field"><label>Warna QR</label><input type="color" id="cd" value="#2F3A1D" style="width:100%;height:46px;border:none;border-radius:12px;background:transparent" /></div>
+            <div class="field"><label>Warna latar</label><input type="color" id="cl" value="#ffffff" style="width:100%;height:46px;border:none;border-radius:12px;background:transparent" /></div>
+          </div>
+          <div class="qr-box" id="box">Isi teks dulu di atas.</div>
+          <button class="btn btn-block" id="go">Unduh PNG</button>`,
+    init(){
+      const box = $('#box');
+      function draw(){
+        const text = $('#txt').value.trim();
+        box.innerHTML = text ? '' : 'Isi teks dulu di atas.';
+        if(!text) return;
+        const holder=document.createElement('div');
+        box.appendChild(holder);
+        new QRCode(holder, {
+          text,
+          width: Number($('#size').value),
+          height: Number($('#size').value),
+          colorDark: $('#cd').value,
+          colorLight: $('#cl').value,
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      }
+      $('#txt').oninput = draw;
+      $('#size').onchange = draw; $('#margin').onchange = draw;
+      $('#cd').oninput = draw; $('#cl').oninput = draw;
+      $('#go').onclick = ()=>{
+        const holder = box.querySelector('div');
+        if(!holder) return toast('Isi teks dulu');
+        const cv = holder.querySelector('canvas');
+        const img = holder.querySelector('img');
+        const src = cv ? cv.toDataURL('image/png') : img.src;
+        const name='qrcode_'+Date.now()+'.png';
+        downloadDataUrl(src, name);
+        historyPush('Generator QR Code', name);
+        showResult('QR code berhasil dibuat');
+      };
+    }},
+
+  { id:'watermark-pdf', name:'Watermark PDF', desc:'Beri watermark teks atau gambar.', icon:svg.stamp,
+    body:`<input type="file" id="f" accept="application/pdf" hidden>
+          <input type="file" id="wi" accept="image/png,image/jpeg" hidden>
+          <div class="drop" id="d">Upload PDF</div>
+          <div class="field"><label>Jenis</label><select id="mode"><option value="text">Watermark Teks</option><option value="image">Watermark Gambar</option></select></div>
+          <div id="textBox">
+            <div class="field"><label>Teks watermark</label><input type="text" id="wtext" value="DOKUMEN RAHASIA" /></div>
+            <div class="grid2">
+              <div class="field"><label>Ukuran huruf</label><input type="text" id="fsize" value="42" /></div>
+              <div class="field"><label>Rotasi (derajat)</label><input type="text" id="rot" value="45" /></div>
+            </div>
+          </div>
+          <div id="imgBox" style="display:none">
+            <div class="drop" id="dimg">Upload gambar watermark<small>PNG transparan</small></div>
+          </div>
+          <div class="grid2">
+            <div class="field"><label>Posisi</label><select id="pos"><option value="center">Tengah</option><option value="tl">Kiri atas</option><option value="tr">Kanan atas</option><option value="bl">Kiri bawah</option><option value="br">Kanan bawah</option><option value="tile">Ulangi (tiling)</option></select></div>
+            <div class="field"><label>Opasitas %</label><input type="text" id="op" value="20" /></div>
+          </div>
+          <button class="btn btn-block" id="go" disabled>Terapkan Watermark</button>`,
+    init(){
+      const f=$('#f');
+      let bytes=null, imgBytes=null, name='dokumen';
+      bindDrop($('#d'), f, async files=>{
+        const file=files[0]; if(!file) return;
+        busy(true,'Membaca PDF...');
+        try{
+          bytes = new Uint8Array(await file.arrayBuffer());
+          name = file.name.replace(/\.pdf$/i,'');
+          busy(false); $('#go').disabled=false;
+          toast('PDF dimuat');
+        }catch(e){ busy(false); toast('Gagal: '+e.message); }
+      });
+      $('#mode').onchange = ()=>{
+        const m = $('#mode').value;
+        $('#textBox').style.display = m==='text'?'block':'none';
+        $('#imgBox').style.display = m==='image'?'block':'none';
+      };
+      bindDrop($('#dimg'), $('#wi'), async files=>{
+        const file=files[0]; if(!file) return;
+        imgBytes = new Uint8Array(await file.arrayBuffer());
+        toast('Gambar watermark dimuat');
+      });
+
+      $('#go').onclick = async ()=>{
+        if(!bytes) return toast('Upload PDF dulu');
+        const op = Math.min(1, Math.max(0, Number($('#op').value)/100 || .2));
+        const pos = $('#pos').value;
+        busy(true,'Menerapkan watermark...');
+        try{
+          const doc = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption:true});
+          for(const page of doc.getPages()){
+            const { width:W, height:H } = page.getSize();
+            if($('#mode').value==='text'){
+              const fs = Number($('#fsize').value)||42;
+              const size = Math.min(fs, W/8);
+              const txt = $('#wtext').value || 'DRAFT';
+              const tw = txt.length*size*0.5;
+              const sp = { center:[.5,.5], tl:[.25,.88], tr:[.75,.88], bl:[.25,.12], br:[.75,.12] };
+              const [fx,fy] = sp[pos] || sp.center;
+              if(pos==='tile'){
+                for(const [tx,ty] of [[.2,.2],[.5,.2],[.8,.2],[.2,.5],[.5,.5],[.8,.5],[.2,.8],[.5,.8],[.8,.8]]){
+                  page.drawText(txt, {
+                    x: tx*W - tw/2, y: ty*H, size, font: await doc.embedFont('Helvetica'),
+                    color: PDFLib.rgb(0.18,0.23,0.11), opacity: op, rotate: PDFLib.degrees(Number($('#rot').value)||0)
+                  });
+                }
+              }else{
+                page.drawText(txt, {
+                  x: fx*W - tw/2, y: fy*H, size, font: await doc.embedFont('Helvetica'),
+                  color: PDFLib.rgb(0.18,0.23,0.11), opacity: op, rotate: PDFLib.degrees(Number($('#rot').value)||0)
+                });
+              }
+            }else{
+              if(!imgBytes) { busy(false); return toast('Upload gambar watermark dulu'); }
+              const emb = imgBytes[0]===0x89 ? await doc.embedPng(imgBytes) : await doc.embedJpg(imgBytes);
+              const scale = Math.min(W, H*1.2) / emb.width * 0.45;
+              const w = emb.width*scale, h = emb.height*scale;
+              const spots = pos==='tile'
+                ? [[.2,.2],[.5,.2],[.8,.2],[.2,.5],[.5,.5],[.8,.5],[.2,.8],[.5,.8],[.8,.8]]
+                : [[.5,.5]];
+              for(const [fx,fy] of spots){
+                page.drawImage(emb, {
+                  x: fx*W - w/2, y: fy*H - h/2, width:w, height:h, opacity:op
+                });
+              }
+            }
+          }
+          const outName = name+'-watermark.pdf';
+          saveBlob(new Blob([await doc.save()],{type:'application/pdf'}), outName);
+          historyPush('Watermark PDF', outName); busy(false);
+          showResult('Selesai: '+outName);
+        }catch(e){ busy(false); toast('Gagal: '+e.message); console.error(e); }
+      };
+    }},
+
+  { id:'rotate-pdf', name:'Putar Halaman PDF', desc:'Rotasi 90/180/270 per halaman.', icon:svg.rotate,
+    body:`<input type="file" id="f" accept="application/pdf" hidden>
+          <div class="drop" id="d">Upload PDF</div>
+          <div class="grid2" style="display:none" id="acts">
+            <button class="btn btn-ghost" id="r90">Putar Semua 90&deg;</button>
+            <button class="btn btn-ghost" id="r180">Putar Semua 180&deg;</button>
+          </div>
+          <ul class="row-list" id="list" hidden></ul>
+          <button class="btn btn-block" id="go" disabled>Unduh PDF Putar</button>`,
+    init(){
+      const f=$('#f'), list=$('#list');
+      let bytes=null, rots={};
+      bindDrop($('#d'), f, async files=>{
+        const file=files[0]; if(!file) return;
+        busy(true,'Membaca PDF...');
+        try{
+          bytes = new Uint8Array(await file.arrayBuffer());
+          const doc = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption:true});
+          rots = {};
+          doc.getPages().forEach((_,i)=> rots[i+1]=0);
+          $('#acts').style.display='grid'; list.hidden=false; $('#go').disabled=false;
+          render();
+          busy(false); toast(doc.getPageCount()+' halaman dimuat');
+        }catch(e){ busy(false); toast('Gagal: '+e.message); }
+      });
+      function render(){
+        list.innerHTML = Object.keys(rots).map(i=>
+          '<li><span class="n">'+i+'</span><span class="name">Rotasi '+rots[i]+'&deg;</span>'+
+          '<select data-n="'+i+'"><option value="0">0&deg;</option><option value="90">90&deg;</option><option value="180">180&deg;</option><option value="270">270&deg;</option><option value="90">+90&deg;</option><option value="-90">-90&deg;</option></select></li>'
+        ).join('');
+        [...list.querySelectorAll('select')].forEach(s=>{
+          s.value = String(rots[s.dataset.n]);
+          s.onchange = ()=>{
+            const n = +s.dataset.n;
+            rots[n] = (rots[n] + Number(s.value) + 360) % 360;
+            render();
+          };
+        });
+      }
+      $('#r90').onclick = ()=>{ Object.keys(rots).forEach(k=> rots[k]=(rots[k]+90)%360); render(); };
+      $('#r180').onclick = ()=>{ Object.keys(rots).forEach(k=> rots[k]=(rots[k]+180)%360); render(); };
+      $('#go').onclick = async ()=>{
+        busy(true,'Menyimpan...');
+        try{
+          const doc = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption:true});
+          doc.getPages().forEach((p,i)=>{
+            const r = rots[i+1]||0;
+            if(r) p.setRotation(PDFLib.degrees(r));
+          });
+          const name='pdf_diputar.pdf';
+          saveBlob(new Blob([await doc.save()],{type:'application/pdf'}), name);
+          historyPush('Putar Halaman PDF', name); busy(false);
+          showResult('Selesai: '+name);
+        }catch(e){ busy(false); toast('Gagal: '+e.message); }
+      };
+    }},
+
+  { id:'pdf-meta', name:'Metadata PDF', desc:'Lihat & ubah informasi PDF.', icon:svg.info,
+    body:`<input type="file" id="f" accept="application/pdf" hidden>
+          <div class="drop" id="d">Upload PDF</div>
+          <div class="meta-table" id="mt" style="display:none"></div>
+          <div class="grid2" style="display:none" id="acts">
+            <button class="btn" id="go">Simpan Metadata</button>
+            <button class="btn btn-ghost" id="reset">Reset</button>
+          </div>`,
+    init(){
+      const f=$('#f');
+      const FIELDS=[['title','Title'],['author','Author'],['subject','Subject'],['keywords','Keywords'],['creator','Creator'],['producer','Producer']];
+      let bytes=null, name='dokumen', values={};
+      bindDrop($('#d'), f, async files=>{
+        const file=files[0]; if(!file) return;
+        busy(true,'Membaca metadata...');
+        try{
+          bytes = new Uint8Array(await file.arrayBuffer());
+          name = file.name.replace(/\.pdf$/i,'');
+          const doc = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption:true});
+          values = {};
+          values.title = doc.getTitle()||'';
+          values.author = doc.getAuthor()||'';
+          values.subject = doc.getSubject()||'';
+          values.keywords = doc.getKeywords()? doc.getKeywords().split(/\s+/).filter(Boolean).join(', ') : '';
+          values.creator = doc.getCreator()||'';
+          values.producer = doc.getProducer()||'';
+          const extra = doc.getCreationDate();
+          $('#mt').innerHTML = FIELDS.map(([k,label])=>
+            '<div class="field"><label>'+label+'</label><input type="text" data-k="'+k+'" /></div>'
+          ).join('') + '<p class="hint">Dibuat: '+(extra? extra.toLocaleString('id-ID'):'tidak diketahui')+
+            ' &middot; Halaman: '+doc.getPageCount()+'</p>';
+          $('#mt').querySelectorAll('input').forEach(i=> i.value = values[i.dataset.k]||'');
+          $('#mt').style.display='flex'; $('#acts').style.display='grid';
+          busy(false);
+        }catch(e){ busy(false); toast('Gagal: '+e.message); }
+      });
+      $('#reset').onclick = ()=>{
+        $('#mt').querySelectorAll('input').forEach(i=> i.value = values[i.dataset.k]||'');
+      };
+      $('#go').onclick = async ()=>{
+        if(!bytes) return toast('Upload PDF dulu');
+        $('#mt').querySelectorAll('input').forEach(i=> values[i.dataset.k]=i.value.trim());
+        busy(true,'Menyimpan...');
+        try{
+          const doc = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption:true});
+          doc.setTitle(values.title||'');
+          doc.setAuthor(values.author||'');
+          doc.setSubject(values.subject||'');
+          doc.setKeywords((values.keywords||'').split(',').map(s=>s.trim()).filter(Boolean));
+          doc.setCreator(values.creator||'Tumbuhin');
+          doc.setProducer(values.producer||'Tumbuhin');
+          doc.setModificationDate(new Date());
+          const outName = name+'-meta.pdf';
+          saveBlob(new Blob([await doc.save()],{type:'application/pdf'}), outName);
+          historyPush('Metadata PDF', outName); busy(false);
+          showResult('Metadata disimpan: '+outName);
+        }catch(e){ busy(false); toast('Gagal: '+e.message); }
+      };
+    }},
+
+  { id:'crop-img', name:'Crop & Rotasi Gambar', desc:'Potong, putar, dan balik gambar.', icon:svg.crop,
+    body:`<input type="file" id="f" accept="image/*" hidden>
+          <div class="drop" id="d">Upload gambar</div>
+          <div class="crop-stage" id="stage" hidden><canvas id="cv"></canvas></div>
+          <div class="grid2">
+            <div class="field"><label>Rasio</label><select id="ar"><option value="free">Bebas</option><option value="1">1:1</option><option value="1.3333">4:3</option><option value="0.75">3:4</option><option value="1.7778">16:9</option></select></div>
+            <div class="field"><label>Format</label><select id="fmt"><option value="image/png">PNG</option><option value="image/jpeg">JPG</option></select></div>
+          </div>
+          <div class="grid2">
+            <button class="btn" id="rl">&larr; Putar</button>
+            <button class="btn" id="rr">Putar &rarr;</button>
+            <button class="btn btn-ghost" id="fh">Balik Horizontal</button>
+            <button class="btn btn-ghost" id="fv">Balik Vertikal</button>
+          </div>
+          <p class="hint">Seret di gambar untuk menentukan area crop. Rasio dikunci sesuai pilihan.</p>
+          <button class="btn btn-block" id="go" disabled>Unduh Hasil</button>`,
+    init(){
+      const f=$('#f'), cv=$('#cv'), stage=$('#stage');
+      let base=null, sel=null, drag=null;
+      const ctx=cv.getContext('2d');
+
+      bindDrop($('#d'), f, async files=>{
+        const file=files[0]; if(!file) return;
+        const url = await readFileAs(file);
+        const img = new Image();
+        img.onload = ()=>{
+          base=document.createElement('canvas');
+          base.width=img.naturalWidth; base.height=img.naturalHeight;
+          base.getContext('2d').drawImage(img,0,0);
+          stage.hidden=false; $('#go').disabled=false;
+          sel=null; paint();
+        };
+        img.src=url;
+      });
+
+      const rotDeg = ()=> $('#stage').dataset.rot|0;
+      function rotate(deg){
+        if(!base) return;
+        const src = base.getContext('2d').getImageData(0,0,base.width,base.height);
+        const sw=base.width, sh=base.height, swap = deg%180!==0;
+        base = document.createElement('canvas');
+        base.width = swap?sh:sw; base.height = swap?sw:sh;
+        const t=document.createElement('canvas'); t.width=sw; t.height=sh;
+        t.getContext('2d').putImageData(src,0,0);
+        base.getContext('2d').translate(base.width/2, base.height/2);
+        base.getContext('2d').rotate(deg*Math.PI/180);
+        base.getContext('2d').drawImage(t,-sw/2,-sh/2);
+        sel=null; paint();
+      }
+      function flip(horizontal){
+        if(!base) return;
+        const c=base.getContext('2d');
+        c.save(); c.translate(base.width,0); c.scale(-1,1); c.drawImage(base,0,0); c.restore();
+        sel=null; paint();
+      }
+      function paint(){
+        const maxW = Math.min(stage.clientWidth-20, 640) || 400;
+        const k = Math.min(1, maxW/base.width);
+        cv.width=Math.round(base.width*k); cv.height=Math.round(base.height*k);
+        ctx.drawImage(base,0,0,cv.width,cv.height);
+        drawSel();
+      }
+      function drawSel(){
+        if(!sel){
+          cv.onpointerdown = null;
+          paint2();
+          return;
+        }
+        paint2(sel);
+      }
+      function paint2(box){
+        ctx.clearRect(0,0,cv.width,cv.height);
+        ctx.drawImage(base,0,0,cv.width,cv.height);
+        if(!box) return;
+        ctx.save();
+        ctx.fillStyle='rgba(47,58,29,.45)';
+        ctx.fillRect(0,0,cv.width,box.y);
+        ctx.fillRect(0,box.y+box.h,cv.width,cv.height-box.y-box.h);
+        ctx.fillRect(0,box.y,box.x,box.h);
+        ctx.fillRect(box.x+box.w,box.y,cv.width-box.x-box.w,box.h);
+        ctx.strokeStyle='#CFFF74'; ctx.lineWidth=3; ctx.strokeRect(box.x,box.y,box.w,box.h);
+        ctx.restore();
+      }
+      const pos = e=>{
+        const r=cv.getBoundingClientRect();
+        return { x:(e.clientX-r.left)*cv.width/r.width, y:(e.clientY-r.top)*cv.height/r.height };
+      };
+      cv.onpointerdown = e=>{
+        if(!base) return;
+        cv.setPointerCapture(e.pointerId);
+        const p=pos(e);
+        drag={ sx:p.x, sy:p.y };
+        sel={ x:p.x, y:p.y, w:0, h:0 };
+        cv.onpointermove = ev=>{
+          const q=pos(ev);
+          const ar=Number($('#ar').value);
+          let w=Math.abs(q.x-drag.sx), h=Math.abs(q.y-drag.sy);
+          if(ar!=='free'){
+            h=w/ar;
+            if(drag.sy>q.y) drag.sy-=h-drag.h, h=Math.abs(q.y-drag.sy);
+          }
+          sel={ x:Math.min(drag.sx,drag.sx+(q.x>drag.sx?w:-w)), y:Math.min(drag.sy,drag.sy+(q.y>drag.sy?h:-h)), w, h:Math.abs(q.y-drag.sy) };
+          paint2(sel);
+        };
+        cv.onpointerup = ()=>{
+          cv.onpointermove=null;
+          if(!sel || sel.w<5 || sel.h<5){ sel=null; paint2(); }
+        };
+      };
+      window.addEventListener('resize', ()=>{ if(base) paint(); });
+
+      $('#rl').onclick = ()=> rotate(-90);
+      $('#rr').onclick = ()=> rotate(90);
+      $('#fh').onclick = ()=> flip(true);
+      $('#fv').onclick = ()=> flip(false);
+      $('#ar').onchange = ()=>{ sel=null; paint2(); };
+      $('#go').onclick = ()=>{
+        if(!base) return toast('Upload gambar dulu');
+        const k = cv.width/base.width;
+        const box = sel || { x:0, y:0, w:base.width, h:base.height };
+        const out=document.createElement('canvas');
+        out.width=Math.round(box.w*k); out.height=Math.round(box.h*k);
+        const cx=out.getContext('2d');
+        cx.drawImage(cv, box.x, box.y, box.w, box.h, 0, 0, out.width, out.height);
+        const type=$('#fmt').value;
+        const ext = type==='image/png'?'png':'jpg';
+        out.toBlob(b=>{
+          saveBlob(b, `crop_${Date.now()}.${ext}`);
+          historyPush('Crop & Rotasi Gambar', `crop_${Date.now()}.${ext}`);
+          showResult('Gambar berhasil disimpan');
+        }, type, .92);
+      };
+    }},
+
+  { id:'unit', name:'Konversi Satuan', desc:'Panjang, berat, suhu, area, data, dll.', icon:svg.ruler,
+    body:`<div class="grid2">
+            <div class="field"><label>Kategori</label><select id="cat"></select></div>
+            <div class="field"><label>Nilai</label><input type="text" id="val" value="1" /></div>
+          </div>
+          <div class="grid2">
+            <div class="field"><label>Dari</label><select id="from"></select></div>
+            <div class="field"><label>Ke</label><select id="to"></select></div>
+          </div>
+          <button class="btn btn-block" id="swap">Tukar From &rarr; Ke</button>
+          <div class="unit-out" id="out">-</div>
+          <table class="conv-table" id="tbl"></table>`,
+    init(){
+      const U = {
+        panjang:{ m:'Meter', km:'Kilometer', cm:'Sentimeter', mm:'Milimeter', mi:'Mile', yd:'Yard', ft:'Kaki', in:'Inci' },
+        berat:{ kg:'Kilogram', g:'Gram', mg:'Miligram', t:'Ton', lb:'Pound', oz:'Ounce' },
+        luas:{ m2:'Meter\u00b2', ha:'Hektar', km2:'Km\u00b2', ft2:'Kaki\u00b2', acre:'Acre' },
+        volume:{ l:'Liter', ml:'Mililiter', m3:'Meter\u00b3', gal:'Galon (US)' },
+        suhu:{ C:'Celcius', F:'Fahrenheit', K:'Kelvin' },
+        kecepatan:{ kmh:'km/jam', ms:'m/detik', mph:'mph', kn:'knot' },
+        waktu:{ s:'Detik', min:'Menit', j:'Jam', h:'Hari', mg2:'Minggu' },
+        data:{ b:'Bit', kb:'Kilobyte', mb:'Megabyte', gb:'Gigabyte', tb:'Terabyte' }
+      };
+      const F = {
+        panjang:{ m:1, km:1000, cm:.01, mm:.001, mi:1609.344, yd:.9144, ft:.3048, in:.0254 },
+        berat:{ kg:1, g:.001, mg:.000001, t:1000, lb:.45359237, oz:.028349523 },
+        luas:{ m2:1, ha:10000, km2:1000000, ft2:.09290304, acre:4046.856 },
+        volume:{ l:1, ml:.001, m3:1000, gal:3.785411784 },
+        suhu:{ C:1, F:1, K:1 },
+        kecepatan:{ kmh:1, ms:3.6, mph:1.609344, kn:1.852 },
+        waktu:{ s:1, min:60, j:3600, h:86400, mg2:604800 },
+        data:{ b:1, kb:1024, mb:1048576, gb:1073741824, tb:1099511627776 }
+      };
+      const cat=$('#cat');
+      cat.innerHTML = Object.keys(U).map((k,i)=>'<option value="'+k+'"'+(i===0?' selected':'')+'>'+k[0].toUpperCase()+k.slice(1)+'</option>').join('');
+      function fill(){
+        const c=cat.value;
+        const opts = Object.keys(U[c]).map(k=>'<option value="'+k+'">'+U[c][k]+'</option>').join('');
+        $('#from').innerHTML=opts; $('#to').innerHTML=opts;
+        $('#to').selectedIndex = 1;
+        calc();
+      }
+      function toBase(v, c, u){
+        if(c==='suhu'){
+          if(u==='C') return v;
+          if(u==='F') return (v-32)*5/9;
+          return v-273.15;
+        }
+        return v * F[c][u];
+      }
+      function fromBase(b, c, u){
+        if(c==='suhu'){
+          if(u==='C') return b;
+          if(u==='F') return b*9/5+32;
+          return b+273.15;
+        }
+        return b / F[c][u];
+      }
+      function calc(){
+        const c=cat.value, from=$('#from').value, to=$('#to').value;
+        let v = parseFloat(String($('#val').value).replace(',','.'));
+        if(isNaN(v)) v=0;
+        const r = fromBase(toBase(v,c,from), c, to);
+        const fmt = Math.abs(r)>=1000? r.toFixed(2) : Math.abs(r)>=1? r.toFixed(4).replace(/0+$/,'').replace(/\.$/,'') : r.toPrecision(6);
+        $('#out').textContent = fmt + ' ' + U[c][to];
+        const base = toBase(1,c,from);
+        $('#tbl').innerHTML = Object.keys(U[c]).map(k=>{
+          const val = fromBase(base,c,k);
+          return '<tr><td>'+U[c][k]+'</td><td>'+(Math.abs(val)>=1000? val.toFixed(2): val.toPrecision(6).replace(/0+$/,'').replace(/\.$/,''))+'</td></tr>';
+        }).join('');
+      }
+      cat.onchange=fill; $('#from').onchange=calc; $('#to').onchange=calc; $('#val').oninput=calc;
+      $('#swap').onclick = ()=>{
+        const f=$('#from').value; $('#from').value=$('#to').value; $('#to').value=f; calc();
+      };
+      fill();
     }},
 
   { id:'zip', name:'Kompresor ZIP', desc:'Gabung & kompres banyak file jadi satu ZIP.', icon:svg.zip,
