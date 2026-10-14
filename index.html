@@ -144,6 +144,15 @@ a.btn-ghost{color:#2F3A1D}
 .card-go{margin-top:auto;display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:.85rem;color:var(--ink)}
 .empty{text-align:center;padding:50px 20px;color:var(--ink-mute);font-weight:600;display:none}
 
+/* ---------- TANDATANGAN ---------- */
+.stage{position:relative;background:#fff;border-radius:var(--radius-md);overflow:hidden;display:none;touch-action:none}
+.stage.on{display:block}
+.stage canvas{display:block;width:100%;height:auto}
+.stage img{position:absolute;left:0;top:0;transform-origin:top left;cursor:grab;touch-action:none;filter:drop-shadow(0 4px 10px rgba(0,0,0,.25))}
+.stage img.drag{cursor:grabbing}
+.stage img.off{display:none}
+input[type=range]{width:100%;accent-color:#CFFF74;cursor:pointer}
+
 /* ---------- SCROLL REVEAL ---------- */
 .reveal{opacity:0;transform:translateY(26px);transition:opacity .6s cubic-bezier(.2,.8,.3,1),transform .6s cubic-bezier(.2,.8,.3,1)}
 .reveal.in{opacity:1;transform:none}
@@ -382,7 +391,7 @@ footer strong{color:var(--ink);font-weight:700}
   </div>
 
   <section class="stats">
-    <div class="stat reveal"><b data-count="10">0</b><span>Tools Konversi</span></div>
+    <div class="stat reveal"><b data-count="11">0</b><span>Tools Konversi</span></div>
     <div class="stat reveal"><b data-count="6">0</b><span>Format Didukung</span></div>
     <div class="stat reveal"><b data-count="100" data-suffix="%">0</b><span>Gratis &amp; Lokal</span></div>
   </section>
@@ -556,7 +565,8 @@ const svg = {
   merge:'<path d="M4 6h5l2 6 2-6h5"/><path d="M4 6v12h16V6"/>',
   zip:'<path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
   text:'<path d="M4 6h16M4 12h16M4 18h10"/>',
-  png:'<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 15l5-5 4 4 3-3 6 6"/>'
+  png:'<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 15l5-5 4 4 3-3 6 6"/>',
+  pen:'<path d="M3 21c3-1 4-4 4-6 0-3 6-10 9-10 2 0 3 1 3 3 0 3-7 9-10 9-2 0-5 1-6 4z"/><path d="m14 7 3 3"/>'
 };
 const icon = p => `<svg viewBox="0 0 24 24" fill="none" stroke="#2F3A1D" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 
@@ -831,6 +841,125 @@ const TOOLS = [
           saveBlob(new Blob([await merged.save()],{type:'application/pdf'}), name);
           historyPush('Gabung PDF',name); busy(false); showResult('PDF gabungan berhasil: '+name);
         }catch(err){ busy(false); toast('Gagal menggabungkan PDF'); }
+      };
+    }},
+
+  { id:'ttd-pdf', name:'Tanda Tangan PDF', desc:'Upload PDF + TTD PNG, geser posisinya.', icon:svg.pen,
+    body:`<div class="row">
+            <input type="file" id="fp" accept="application/pdf" hidden>
+            <input type="file" id="ft" accept="image/png,image/jpeg" hidden>
+            <div class="drop" id="dp">Upload PDF<small>File dokumen</small></div>
+            <div class="drop" id="dt">Upload TTD<small>PNG background transparan</small></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Halaman PDF</label><input type="text" id="pg" value="1" /></div>
+            <div class="field"><label>Ukuran TTD</label><input type="range" id="size" min="8" max="140" value="38" /></div>
+          </div>
+          <div class="field"><label>Opasitas TTD</label><input type="range" id="op" min="10" max="100" value="100" /></div>
+          <div class="stage" id="stage"><canvas id="cv"></canvas><img id="sig" alt="" class="off" /></div>
+          <p class="hint">Geser tanda tangan langsung di halaman. Klik "Simpan" untuk mengunduh PDF bertanda tangan.</p>
+          <button class="btn btn-block" id="go" disabled>Simpan PDF Bertanda Tangan</button>`,
+    init(){
+      const fp=$('#fp'), ft=$('#ft'), stage=$('#stage'), cv=$('#cv'), sig=$('#sig');
+      let pageW=1, pdfDoc=null, sigSrc=null, pos={x:0,y:0}, sw=0;
+
+      const draw = ()=>{
+        if(!sigSrc) return;
+        sig.style.transform = `translate(${pos.x}px,${pos.y}px) scale(${sw})`;
+      };
+      const showStage = ()=>{ if(cv.width) stage.classList.add('on'); };
+
+      bindDrop($('#dp'), fp, async files=>{
+        const file=files[0]; if(!file) return;
+        busy(true,'Membaca PDF...');
+        try{
+          const buf = await readFileAs(file,'arrayBuffer');
+          pdfDoc = await pdfjsLib.getDocument({data:buf}).promise;
+          $('#pg').max = pdfDoc.numPages;
+          await renderPage(Number($('#pg').value)||1);
+          busy(false); toast(`PDF dimuat (${pdfDoc.numPages} halaman)`);
+        }catch(e){ busy(false); toast('Gagal membaca PDF'); }
+      });
+
+      bindDrop($('#dt'), ft, async files=>{
+        const file=files[0]; if(!file) return;
+        sigSrc = await readFileAs(file);
+        const img = new Image();
+        img.onload = ()=>{
+          sig.src = sigSrc;
+          sig.classList.remove('off');
+          sw = Number($('#size').value) / Math.max(img.width,1) * stage.clientWidth;
+          pos = { x: stage.clientWidth*0.3, y: Math.max(10, cv.height*0.7) };
+          draw(); $('#go').disabled = false;
+        };
+        img.src = sigSrc;
+      });
+
+      async function renderPage(n){
+        if(!pdfDoc) return;
+        const page = await pdfDoc.getPage(Math.min(Math.max(n,1), pdfDoc.numPages));
+        const vp = page.getViewport({scale:2});
+        cv.width = vp.width; cv.height = vp.height;
+        await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+        showStage();
+        if(sigSrc){
+          const r = cv.getBoundingClientRect();
+          const k = r.width / cv.width;
+          pos.x = Math.min(pos.x, r.width*0.6);
+          pos.y = Math.min(pos.y, r.height*0.8);
+          sw = Number($('#size').value)/100 * r.width / (sig.naturalWidth*k||1);
+          draw();
+        }
+      }
+
+      $('#pg').onchange = ()=> renderPage(Number($('#pg').value)||1);
+      $('#size').oninput = e=>{
+        const r = cv.getBoundingClientRect();
+        const k = r.width / cv.width;
+        sw = Number(e.target.value)/100 * r.width / Math.max(sig.naturalWidth*k,1);
+        draw();
+      };
+      $('#op').oninput = e=> sig.style.opacity = e.target.value/100;
+
+      // drag & drop tanda tangan
+      let dragging=false;
+      const startDrag = e=>{
+        if(!sigSrc) return;
+        dragging = true; sig.classList.add('drag');
+        sig.setPointerCapture(e.pointerId); e.preventDefault();
+      };
+      sig.addEventListener('pointerdown', startDrag);
+      sig.addEventListener('pointermove', e=>{
+        if(!dragging) return;
+        const r = stage.getBoundingClientRect();
+        pos.x = Math.min(Math.max(0, e.clientX-r.left), r.width);
+        pos.y  = Math.min(Math.max(0, e.clientY-r.top), r.height);
+        draw();
+      });
+      const stopDrag = ()=>{ dragging=false; sig.classList.remove('drag'); };
+      sig.addEventListener('pointerup', stopDrag);
+      sig.addEventListener('pointercancel', stopDrag);
+      window.addEventListener('resize', ()=>{ if(sigSrc){ showStage(); $('#size').dispatchEvent(new Event('input')); } }, { once:true });
+
+      $('#go').onclick = ()=>{
+        if(!pdfDoc || !sigSrc) return toast('Upload PDF dan TTD dulu');
+        busy(true,'Menyimpan PDF...');
+        const w = cv.width, h = cv.height;
+        const k = w / cv.getBoundingClientRect().width;
+        const out = document.createElement('canvas');
+        out.width = w; out.height = h;
+        const ctx = out.getContext('2d');
+        ctx.drawImage(cv, 0, 0);
+        ctx.globalAlpha = Number($('#op').value)/100;
+        const nw = sw*k, nh = (sig.naturalHeight/sig.naturalWidth)*nw;
+        ctx.drawImage(sig, pos.x*k, pos.y*k, nw, nh);
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({orientation: w>h?'landscape':'portrait', unit:'px', format:[w,h], hotfixes:['px_scaling']});
+        pdf.addImage(out.toDataURL('image/jpeg', .92), 'JPEG', 0, 0, w, h);
+        const name = `ttd_${Date.now()}.pdf`;
+        pdf.save(name);
+        historyPush('Tanda Tangan PDF', name); busy(false);
+        showResult('PDF bertanda tangan: '+name);
       };
     }},
 

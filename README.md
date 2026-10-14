@@ -21,6 +21,7 @@ Semua tool dibuka lewat satu dashboard (tanpa berpindah halaman):
 | PDF ke PNG | Halaman PDF jadi gambar PNG |
 | Extract Teks PDF | Ambil teks dari PDF, salin / unduh `.txt` |
 | Gabung PDF | Satukan beberapa PDF, atur urutan |
+| Tanda Tangan PDF | Upload PDF + TTD PNG, geser posisinya di halaman |
 | Kompresor ZIP | Gabung & kompres file jadi satu ZIP |
 
 Fitur pendukung:
