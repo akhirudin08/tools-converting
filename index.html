@@ -1,82 +1,790 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard Konversi File</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
-  <style>
-    * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
-    body { background: #f0f2f5; padding: 2rem; }
-    .container {
-      max-width: 640px; margin: auto; background: #fff;
-      padding: 2rem; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-    }
-    h1 {
-      text-align: center; margin-bottom: 1.5rem;
-      font-size: 1.8rem; color: #333;
-    }
-    #searchInput {
-      width: 100%; padding: 0.8rem;
-      margin-bottom: 1.2rem; font-size: 1rem;
-      border-radius: 8px; border: 1px solid #ccc;
-    }
-    .grid {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-    }
-    .tool {
-      background: #eef; padding: 1rem; text-align: center;
-      border-radius: 8px; cursor: pointer; transition: 0.3s;
-    }
-    .tool:hover { background: #cde; }
-    .tool span {
-      display: block; font-size: 1.05rem;
-      font-weight: 600; margin-top: 0.5rem;
-    }
-    footer {
-      text-align: center; margin-top: 2rem;
-      font-size: 0.9rem; color: #666;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tumbuhin — Tool Konversi File</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --lime:#CFFF74;
+  --lime-soft:#E4FFA8;
+  --lime-deep:#B4E84E;
+  --ink:#2F3A1D;
+  --ink-soft:#4A5A33;
+  --ink-mute:#7A8A66;
+  --paper:#FFFFFF;
+  --bg:#F6F7F2;
+  --radius-xl:32px;
+  --radius-lg:24px;
+  --radius-md:16px;
+  --radius-pill:999px;
+  --shadow:0 18px 40px -18px rgba(47,58,29,.45);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:'Plus Jakarta Sans',system-ui,-apple-system,Segoe UI,sans-serif;
+  background:var(--bg);color:var(--ink);line-height:1.5;
+  -webkit-font-smoothing:antialiased;padding-bottom:80px;
+}
+img{max-width:100%;display:block}
+button{font-family:inherit}
+::selection{background:var(--lime);color:var(--ink)}
+
+/* ---------- LAYOUT ---------- */
+.wrap{width:min(1160px,92vw);margin:0 auto}
+
+/* ---------- NAV ---------- */
+.nav{position:sticky;top:0;z-index:40;background:rgba(246,247,242,.82);backdrop-filter:blur(14px)}
+.nav-in{height:76px;display:flex;align-items:center;gap:14px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.15rem;letter-spacing:-.02em}
+.brand-mark{width:36px;height:36px;border-radius:12px;background:var(--ink);display:grid;place-items:center}
+.brand-mark svg{width:20px;height:20px}
+.nav-links{margin-left:auto;display:flex;align-items:center;gap:6px}
+.nav-links a{
+  color:var(--ink-soft);text-decoration:none;font-weight:600;font-size:.92rem;
+  padding:10px 16px;border-radius:var(--radius-pill);transition:.2s;
+}
+.nav-links a:hover{background:var(--lime-soft);color:var(--ink)}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:none;
+  background:var(--ink);color:var(--lime);font-weight:700;font-size:.95rem;
+  padding:14px 24px;border-radius:var(--radius-pill);transition:.2s;text-decoration:none;
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 12px 24px -10px rgba(47,58,29,.6)}
+.btn:active{transform:translateY(0)}
+.btn-ghost{background:var(--lime);color:var(--ink)}
+.btn-ghost:hover{background:var(--lime-deep)}
+.btn-sm{padding:10px 18px;font-size:.87rem}
+.btn-block{width:100%;justify-content:center}
+
+/* ---------- HERO ---------- */
+.hero{margin-top:28px;border-radius:var(--radius-xl);background:var(--lime);overflow:hidden;box-shadow:var(--shadow)}
+.hero-in{display:grid;grid-template-columns:1.05fr .95fr;align-items:stretch}
+.hero-copy{padding:56px 56px 60px}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:8px;background:var(--ink);color:var(--lime);
+  font-size:.8rem;font-weight:700;letter-spacing:.04em;padding:8px 16px;border-radius:var(--radius-pill);
+}
+.hero h1{
+  margin:22px 0 16px;font-size:clamp(2.3rem,4.6vw,3.6rem);line-height:1.02;
+  letter-spacing:-.04em;font-weight:800;
+}
+.hero p{max-width:34ch;color:var(--ink-soft);font-weight:500;font-size:1.03rem}
+.hero-cta{display:flex;gap:12px;margin-top:28px;flex-wrap:wrap}
+.hero-art{position:relative;background:var(--ink);border-radius:28px;margin:14px;overflow:hidden;display:grid;place-items:center;min-height:320px}
+.hero-art::after{
+  content:"";position:absolute;width:280px;height:280px;border-radius:50%;
+  background:radial-gradient(circle at 30% 30%,rgba(207,255,116,.28),transparent 70%);
+}
+.hero-art svg{width:64%;max-width:260px;position:relative;z-index:1}
+
+/* ---------- PALETTE STRIP ---------- */
+.palette{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.swatch{border-radius:var(--radius-lg);padding:34px 32px;box-shadow:var(--shadow)}
+.swatch-lime{background:var(--lime)}
+.swatch-ink{background:var(--ink);color:var(--lime)}
+.swatch h3{font-size:clamp(1.5rem,2.6vw,2.1rem);letter-spacing:-.03em;font-weight:800}
+.swatch span{font-size:.82rem;letter-spacing:.16em;text-transform:uppercase;opacity:.65;font-weight:600}
+
+/* ---------- TOOLS ---------- */
+.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin:64px 0 22px;flex-wrap:wrap}
+.section-head h2{font-size:clamp(1.7rem,3vw,2.3rem);letter-spacing:-.03em;font-weight:800}
+.section-head p{color:var(--ink-mute);font-weight:500;font-size:.95rem}
+.search{
+  display:flex;align-items:center;gap:12px;background:var(--paper);border:2px solid transparent;
+  border-radius:var(--radius-pill);padding:14px 22px;box-shadow:0 8px 24px -16px rgba(47,58,29,.5);
+  transition:.2s;
+}
+.search:focus-within{border-color:var(--lime-deep);transform:translateY(-2px)}
+.search svg{width:18px;height:18px;color:var(--ink-mute);flex:none}
+.search input{border:none;outline:none;background:transparent;font-family:inherit;font-size:.98rem;font-weight:600;width:100%;color:var(--ink)}
+.search input::placeholder{color:var(--ink-mute);font-weight:500}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+.card{
+  position:relative;background:var(--paper);border-radius:var(--radius-lg);padding:26px 24px;
+  cursor:pointer;text-align:left;border:2px solid transparent;transition:.22s;box-shadow:0 10px 30px -20px rgba(47,58,29,.5);
+  display:flex;flex-direction:column;gap:14px;font-family:inherit;color:var(--ink);
+}
+.card:hover{transform:translateY(-4px);border-color:var(--lime);box-shadow:var(--shadow)}
+.card-ico{width:46px;height:46px;border-radius:14px;background:var(--lime);display:grid;place-items:center}
+.card-ico svg{width:22px;height:22px}
+.card h3{font-size:1.06rem;font-weight:800;letter-spacing:-.02em}
+.card p{color:var(--ink-mute);font-size:.88rem;font-weight:500}
+.card-go{margin-top:auto;display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:.85rem;color:var(--ink)}
+.empty{text-align:center;padding:50px 20px;color:var(--ink-mute);font-weight:600;display:none}
+
+/* ---------- HISTORY ---------- */
+.history{background:var(--ink);color:var(--lime);border-radius:var(--radius-xl);padding:34px 32px;margin-top:64px}
+.history h2{font-size:1.3rem;letter-spacing:-.02em;font-weight:800}
+.history p{opacity:.6;font-size:.88rem;font-weight:500;margin-top:4px}
+.hist-list{list-style:none;display:flex;flex-direction:column;gap:8px;margin-top:20px;max-height:220px;overflow:auto}
+.hist-list li{
+  background:rgba(207,255,116,.08);border:1px solid rgba(207,255,116,.16);
+  padding:10px 14px;border-radius:12px;font-size:.84rem;font-weight:600;display:flex;justify-content:space-between;gap:12px;
+}
+.hist-list li span{opacity:.5;font-weight:500;white-space:nowrap}
+.hist-clear{margin-top:16px;background:transparent;border:1px solid rgba(207,255,116,.4);color:var(--lime);cursor:pointer;padding:9px 18px;border-radius:var(--radius-pill);font-weight:700;font-size:.82rem;transition:.2s}
+.hist-clear:hover{background:var(--lime);color:var(--ink)}
+
+/* ---------- MODAL ---------- */
+.modal{
+  position:fixed;inset:0;z-index:100;background:rgba(47,58,29,.55);backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center;padding:24px;
+}
+.modal.open{display:flex;animation:fade .2s ease}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.sheet{
+  width:min(620px,100%);max-height:90vh;overflow:auto;background:var(--bg);
+  border-radius:var(--radius-xl);box-shadow:0 30px 70px -20px rgba(0,0,0,.5);animation:pop .25s cubic-bezier(.2,.9,.3,1.2);
+}
+@keyframes pop{from{transform:translateY(18px) scale(.97);opacity:0}to{transform:none;opacity:1}}
+.sheet-head{
+  position:sticky;top:0;background:var(--lime);padding:26px 28px;display:flex;align-items:flex-start;gap:16px;z-index:2;
+  border-radius:var(--radius-xl) var(--radius-xl) 0 0;
+}
+.sheet-head h2{font-size:1.4rem;font-weight:800;letter-spacing:-.02em}
+.sheet-head p{color:var(--ink-soft);font-size:.87rem;font-weight:500;margin-top:4px}
+.sheet-close{
+  margin-left:auto;background:var(--ink);color:var(--lime);border:none;cursor:pointer;
+  width:38px;height:38px;border-radius:50%;font-size:1.1rem;flex:none;transition:.2s;line-height:1;
+}
+.sheet-close:hover{transform:rotate(90deg)}
+.sheet-body{padding:26px 28px 30px;display:flex;flex-direction:column;gap:16px}
+
+.field label{display:block;font-size:.82rem;font-weight:700;letter-spacing:.02em;margin-bottom:8px}
+textarea,input[type=text],select{
+  width:100%;font-family:inherit;font-size:.95rem;font-weight:500;color:var(--ink);
+  background:var(--paper);border:2px solid transparent;border-radius:var(--radius-md);
+  padding:14px 16px;outline:none;transition:.2s;resize:vertical;
+}
+textarea:focus,input[type=text]:focus,select:focus{border-color:var(--lime-deep)}
+.drop{
+  border:2px dashed var(--ink-mute);border-radius:var(--radius-lg);padding:34px 20px;text-align:center;
+  background:var(--paper);cursor:pointer;transition:.2s;font-weight:600;color:var(--ink-soft);
+}
+.drop:hover,.drop.over{border-color:var(--lime-deep);background:var(--lime-soft);color:var(--ink)}
+.drop small{display:block;font-weight:500;font-size:.8rem;opacity:.7;margin-top:6px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.thumbs{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+.thumb{position:relative;width:88px;border-radius:14px;overflow:hidden;background:var(--paper);cursor:grab}
+.thumb img{width:100%;height:88px;object-fit:cover;display:block}
+.thumb b{position:absolute;top:5px;left:5px;background:var(--ink);color:var(--lime);font-size:.7rem;padding:2px 7px;border-radius:6px}
+.thumb button{position:absolute;top:5px;right:5px;background:#E0564B;color:#fff;border:none;width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:.75rem;line-height:1}
+.sort-item{
+  display:flex;align-items:center;gap:12px;background:var(--paper);border-radius:14px;padding:12px 14px;cursor:grab;
+}
+.sort-item .grip{color:var(--ink-mute);font-weight:800}
+.sort-item span{flex:1;font-size:.9rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sort-item small{color:var(--ink-mute);font-weight:600;font-size:.78rem}
+.sort-item button{background:transparent;border:none;color:var(--ink-mute);cursor:pointer;font-size:1rem}
+.sort-item button:hover{color:#E0564B}
+.list{display:flex;flex-direction:column;gap:8px}
+.preview-box{background:var(--paper);border-radius:var(--radius-md);padding:14px;text-align:center}
+.preview-box canvas,.preview-box img{max-height:280px;margin:0 auto;border-radius:10px}
+.hint{font-size:.82rem;color:var(--ink-mute);font-weight:500}
+.spinner{
+  width:26px;height:26px;border:3px solid rgba(47,58,29,.2);border-top-color:var(--ink);
+  border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 8px;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{display:none;flex-direction:column;align-items:center;gap:8px;padding:10px}
+.loading.on{display:flex}
+.result{display:none;background:var(--ink);color:var(--lime);border-radius:var(--radius-md);padding:14px 16px;font-size:.86rem;font-weight:600}
+.result.on{display:block}
+
+/* ---------- TOAST ---------- */
+.toast{
+  position:fixed;left:50%;bottom:32px;transform:translate(-50%,24px);z-index:200;
+  background:var(--ink);color:var(--lime);font-weight:700;font-size:.9rem;
+  padding:14px 24px;border-radius:var(--radius-pill);box-shadow:var(--shadow);
+  opacity:0;pointer-events:none;transition:.28s;max-width:90vw;text-align:center;
+}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ---------- FOOTER ---------- */
+footer{margin-top:70px;text-align:center;color:var(--ink-mute);font-size:.86rem;font-weight:500}
+footer strong{color:var(--ink);font-weight:700}
+
+@media(max-width:860px){
+  .hero-in{grid-template-columns:1fr}
+  .hero-copy{padding:38px 28px 30px}
+  .hero-art{min-height:230px;margin-top:0}
+  .palette{grid-template-columns:1fr}
+  .nav-links a:not(.btn){display:none}
+  .row{grid-template-columns:1fr}
+}
+</style>
 </head>
 <body>
-  <div class="container">
-    <h1>📁 Dashboard Konversi File</h1>
-    <input type="text" id="searchInput" placeholder="🔍 Cari konversi...">
-    <div class="grid" id="toolGrid">
-      <div class="tool" onclick="goTo('txttopdf.html')">📝<span>TXT ke PDF</span></div>
-      <div class="tool" onclick="goTo('htmltopdf.html')">🌐<span>HTML ke PDF</span></div>
-      <div class="tool" onclick="goTo('jpgtopdf.html')">🖼️<span>JPG ke PDF</span></div>
-      <div class="tool" onclick="goTo('multijpgtopdf.html')">📸<span>Multi JPG ke PDF</span></div>
-      <div class="tool" onclick="goTo('pdftojpg.html')">📄<span>PDF ke JPG</span></div>
-      <div class="tool" onclick="goTo('jpgtopng.html')">🎨<span>JPG ↔ PNG</span></div>
-      <div class="tool" onclick="goTo('pdftopng.html')">🖼️<span>PDF ke PNG</span></div>
-      <div class="tool" onclick="goTo('pdftotext.html')">🔎<span>Extract Teks PDF</span></div>
-      <div class="tool" onclick="goTo('gabunganpdf.html')">📎<span>Gabung PDF</span></div>
-      <div class="tool" onclick="goTo('compresszip.html')">🗜️<span>Kompresor ZIP</span></div>
+
+<nav class="nav">
+  <div class="wrap nav-in">
+    <div class="brand">
+      <span class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#CFFF74" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20h10"/><path d="M10 20c5.5-1 8-4.5 8-10V4h-6c-4 0-7 2.5-7 6.5 0 3 1.5 5 4 5.5"/></svg>
+      </span>
+      Tumbuhin
     </div>
-    <footer>🚀 Dibuat oleh Mohamad Akhirudin | <span id="year"></span></footer>
+    <div class="nav-links">
+      <a href="#tools">Tools</a>
+      <a href="#palette">Palette</a>
+      <a href="#riwayat">Riwayat</a>
+      <a class="btn btn-sm" href="#tools">Mulai</a>
+    </div>
   </div>
+</nav>
 
-  <script>
-    function goTo(page) {
-      window.location.href = page;
-    }
+<header class="wrap">
+  <section class="hero">
+    <div class="hero-in">
+      <div class="hero-copy">
+        <span class="eyebrow">100% Gratis &amp; Lokal</span>
+        <h1>Konversi File,<br>Bertumbuh Gampang.</h1>
+        <p>Semua kebutuhan convert file kamu dalam satu halaman. Tanpa upload, tanpa daftar, processed langsung di perangkat.</p>
+        <div class="hero-cta">
+          <a class="btn" href="#tools">Lihat Semua Tools &rarr;</a>
+          <a class="btn btn-ghost" href="#palette">Lihat Tema</a>
+        </div>
+      </div>
+      <div class="hero-art">
+        <svg viewBox="0 0 200 200" fill="none">
+          <path d="M100 170v-52" stroke="#CFFF74" stroke-width="8" stroke-linecap="round"/>
+          <path d="M100 118c-32-6-48-28-48-56 0-6 1-12 3-18h48c22 0 40 16 40 36 0 20-18 38-43 38z" fill="#CFFF74"/>
+          <path d="M104 74c26-2 44-20 46-44" stroke="#CFFF74" stroke-width="8" stroke-linecap="round"/>
+          <path d="M56 170h88l-8-34H64z" fill="#CFFF74" opacity=".55"/>
+          <path d="M64 136c26 8 46 8 72 0" stroke="#2F3A1D" stroke-width="5" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+  </section>
 
-    document.getElementById("year").textContent = new Date().getFullYear();
+  <section class="palette" id="palette">
+    <div class="swatch swatch-lime">
+      <h3>Warm Lime</h3>
+      <span>HEX: #CFFF74</span>
+    </div>
+    <div class="swatch swatch-ink">
+      <h3>Olive Ink</h3>
+      <span>HEX: #2F3A1D</span>
+    </div>
+  </section>
+</header>
 
-    const searchInput = document.getElementById("searchInput");
-    const toolItems = document.querySelectorAll(".tool");
+<main class="wrap">
+  <section id="tools">
+    <div class="section-head">
+      <div>
+        <h2>Semua Tools</h2>
+        <p>Pilih tool yang kamu butuh, langsung jalan di browser.</p>
+      </div>
+      <label class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+        <input type="text" id="search" placeholder="Cari tool..." />
+      </label>
+    </div>
+    <div class="grid" id="grid"></div>
+    <p class="empty" id="empty">Tool tidak ditemukan. Coba kata kunci lain.</p>
+  </section>
 
-    searchInput.addEventListener("input", () => {
-      const keyword = searchInput.value.toLowerCase();
-      toolItems.forEach(item => {
-        const text = item.textContent.toLowerCase();
-        item.style.display = text.includes(keyword) ? "block" : "none";
+  <section class="history" id="riwayat">
+    <h2>Riwayat File</h2>
+    <p>Disimpan di localStorage perangkat kamu — tidak ada yang dikirim ke server.</p>
+    <ul class="hist-list" id="histList"></ul>
+    <button class="hist-clear" id="histClear">Bersihkan Riwayat</button>
+  </section>
+</main>
+
+<footer class="wrap">
+  Dibuat oleh <strong>Mohamad Akhirudin</strong> &copy; <span id="year"></span>
+</footer>
+
+<div class="modal" id="modal">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheetTitle"></h2>
+        <p id="sheetDesc"></p>
+      </div>
+      <button class="sheet-close" id="sheetClose" aria-label="Tutup">&times;</button>
+    </div>
+    <div class="sheet-body" id="sheetBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.162/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+/* =========================================================
+   THEME
+   ========================================================= */
+const C = { lime:'#CFFF74', ink:'#2F3A1D' };
+
+/* =========================================================
+   UTILITIES
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const modal = $('#modal'), sheetBody = $('#sheetBody');
+const state = {};
+
+function toast(msg){
+  const t = $('#toast');
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove('on'), 2600);
+}
+function busy(on, msg='Memproses...'){
+  let el = sheetBody.querySelector('.loading');
+  if(!el){
+    el = document.createElement('div');
+    el.className = 'loading';
+    el.innerHTML = '<div class="spinner"></div><span></span>';
+    sheetBody.appendChild(el);
+  }
+  el.querySelector('span').textContent = msg;
+  el.classList.toggle('on', on);
+}
+function showResult(msg){
+  let el = sheetBody.querySelector('.result');
+  if(!el){
+    el = document.createElement('div');
+    el.className = 'result';
+    sheetBody.appendChild(el);
+  }
+  el.textContent = msg; el.classList.add('on');
+}
+function saveBlob(blob, name){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+}
+function downloadDataUrl(dataUrl, name){
+  const a = document.createElement('a');
+  a.href = dataUrl; a.download = name; a.click();
+}
+function historyPush(tool, name){
+  const h = JSON.parse(localStorage.getItem('toolHistory')||'[]');
+  h.unshift({ tool, name, at: new Date().toLocaleString('id-ID') });
+  localStorage.setItem('toolHistory', JSON.stringify(h.slice(0,40)));
+  renderHistory();
+}
+function renderHistory(){
+  const h = JSON.parse(localStorage.getItem('toolHistory')||'[]');
+  const ul = $('#histList');
+  if(!h.length){ ul.innerHTML = '<li style="opacity:.55">Belum ada file diproses.</li>'; return; }
+  ul.innerHTML = h.map(i=>`<li>${i.name}<span>${i.tool} &middot; ${i.at}</span></li>`).join('');
+}
+$('#histClear').addEventListener('click', ()=>{
+  if(!confirm('Bersihkan semua riwayat file?')) return;
+  localStorage.removeItem('toolHistory'); renderHistory(); toast('Riwayat dibersihkan');
+});
+
+function readFileAs(file, as='dataURL'){
+  return new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onload = ()=>res(r.result);
+    r.onerror = rej;
+    as==='arrayBuffer' ? r.readAsArrayBuffer(file) : r.readAsDataURL(file);
+  });
+}
+function bindDrop(zone, input, handler){
+  zone.addEventListener('click', ()=>input.click());
+  zone.addEventListener('dragover', e=>{ e.preventDefault(); zone.classList.add('over'); });
+  zone.addEventListener('dragleave', ()=>zone.classList.remove('over'));
+  zone.addEventListener('drop', e=>{
+    e.preventDefault(); zone.classList.remove('over');
+    handler(e.dataTransfer.files);
+  });
+  input.addEventListener('change', ()=>{ if(input.files.length) handler(input.files); });
+}
+
+/* =========================================================
+   TOOL DEFINITIONS
+   ========================================================= */
+const svg = {
+  pdf:'<path d="M14 3v5h5"/><path d="M6 3h8l5 5v13H6z"/><path d="M9 13h6M9 17h4"/>',
+  code:'<path d="m8 8-4 4 4 4"/><path d="m16 8 4 4-4 4"/><path d="m13 5-2 14"/>',
+  img:'<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m4 18 5-5 4 4 3-3 4 4"/>',
+  stack:'<rect x="7" y="3" width="14" height="14" rx="3"/><path d="M17 17v1a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3h1"/>',
+  merge:'<path d="M4 6h5l2 6 2-6h5"/><path d="M4 6v12h16V6"/>',
+  zip:'<path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
+  text:'<path d="M4 6h16M4 12h16M4 18h10"/>',
+  png:'<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 15l5-5 4 4 3-3 6 6"/>'
+};
+const icon = p => `<svg viewBox="0 0 24 24" fill="none" stroke="#2F3A1D" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+
+const TOOLS = [
+  { id:'txt-pdf', name:'TXT ke PDF', desc:'Tempel teks lalu simpan jadi PDF A4.', icon:svg.pdf,
+    body:`<div class="field"><label>Teks</label><textarea id="t" rows="10" placeholder="Tulis atau tempel teks di sini..."></textarea></div>
+          <button class="btn btn-block" id="go">Buat PDF</button>`,
+    init(){ $('#go').onclick = ()=>{
+      const text = $('#t').value.trim();
+      if(!text) return toast('Masukkan teks terlebih dahulu');
+      busy(true,'Menyusun PDF...');
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF();
+      pdf.splitTextToSize(text, 180).forEach((line,i)=>{ if(i>0 && i%46===0){ pdf.addPage(); } pdf.text(line, 12, 16+(i%46)*5); });
+      const name = `text_${Date.now()}.pdf`;
+      pdf.save(name); historyPush('TXT ke PDF', name); busy(false);
+      showResult('PDF berhasil dibuat: '+name);
+    };}},
+
+  { id:'html-pdf', name:'HTML ke PDF', desc:'Render potongan kode HTML jadi PDF.', icon:svg.code,
+    body:`<div class="field"><label>Kode HTML</label><textarea id="t" rows="10" placeholder="&lt;h1&gt;Halo&lt;/h1&gt;"></textarea></div>
+          <button class="btn btn-block" id="go">Render PDF</button>`,
+    init(){ $('#go').onclick = ()=>{
+      const html = $('#t').value.trim();
+      if(!html) return toast('Masukkan HTML terlebih dahulu');
+      busy(true,'Merender...');
+      const box = document.createElement('div');
+      box.style.cssText='padding:16px;font-family:sans-serif';
+      box.innerHTML = html;
+      const name = `html_${Date.now()}.pdf`;
+      html2pdf().set({ margin:10, filename:name, html2canvas:{scale:2}, jsPDF:{unit:'mm',format:'a4'} })
+        .from(box).save()
+        .then(()=>{ historyPush('HTML ke PDF', name); busy(false); showResult('PDF berhasil dibuat: '+name); });
+    };}},
+
+  { id:'jpg-pdf', name:'JPG ke PDF', desc:'Satu gambar jadi satu halaman PDF.', icon:svg.img,
+    body:`<input type="file" id="f" accept="image/jpeg,image/png" hidden>
+          <div class="drop" id="d">Pilih atau tarik gambar ke sini<small>JPG / PNG</small></div>
+          <div class="preview-box" id="pv" style="display:none"><img id="prev"></div>
+          <button class="btn btn-block" id="go" disabled>Buat PDF</button>`,
+    init(){ const f=$('#f'), d=$('#d');
+      bindDrop(d,f, files=>{
+        const file = files[0]; if(!file) return;
+        readFileAs(file).then(src=>{ $('#prev').src = src; $('#pv').style.display='block'; $('#go').disabled=false; state.src=src; });
       });
-    });
-  </script>
+      $('#go').onclick = ()=>{
+        if(!state.src) return toast('Pilih gambar dulu');
+        busy(true,'Membuat PDF...');
+        const { jsPDF } = window.jspdf;
+        const img = new Image();
+        img.onload = ()=>{
+          const pdf = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+          const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+          const ratio = Math.min((pw-20)/img.width,(ph-20)/img.height);
+          const w = img.width*ratio, h = img.height*ratio;
+          pdf.addImage(img,'JPEG',(pw-w)/2,(ph-h)/2,w,h);
+          const name = `jpgtopdf_${Date.now()}.pdf`;
+          pdf.save(name); historyPush('JPG ke PDF', name); busy(false); showResult('PDF berhasil dibuat: '+name);
+        };
+        img.src = state.src;
+      };
+    }},
+
+  { id:'multi-jpg-pdf', name:'Multi JPG ke PDF', desc:'Gabung banyak gambar, atur urutannya.', icon:svg.stack,
+    body:`<input type="file" id="f" accept="image/jpeg,image/png" multiple hidden>
+          <div class="drop" id="d">Pilih atau tarik beberapa gambar<small>Bisa diurutkan dengan drag</small></div>
+          <div class="thumbs" id="th"></div>
+          <div class="row">
+            <div class="field"><label>Ukuran</label><select id="size"><option value="a4">A4</option><option value="letter">Letter</option></select></div>
+            <div class="field"><label>Orientasi</label><select id="ori"><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select></div>
+          </div>
+          <button class="btn btn-block" id="go">Buat PDF</button>`,
+    init(){ const f=$('#f'), th=$('#th'); let items=[];
+      bindDrop(d,f, async files=>{
+        for(const file of files){
+          const src = await readFileAs(file);
+          const div = document.createElement('div');
+          div.className='thumb';
+          div.innerHTML = `<img src="${src}"><b>1</b><button title="Hapus">&times;</button>`;
+          div.querySelector('button').onclick = e=>{ e.stopPropagation(); div.remove(); items = items.filter(i=>i!==item); label(); };
+          const item = { src, div };
+          items.push(item); th.appendChild(div);
+        }
+        label();
+      });
+      const label = ()=> th.querySelectorAll('.thumb').forEach((el,i)=> el.querySelector('b').textContent = i+1);
+      new Sortable(th,{animation:150,onEnd:()=>{
+        items = [...th.children].map(el=>items.find(i=>i.div===el)).filter(Boolean); label();
+      }});
+      $('#go').onclick = ()=>{
+        if(!items.length) return toast('Tambahkan gambar terlebih dahulu');
+        busy(true,'Menggabungkan gambar...');
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({orientation:$('#ori').value,format:$('#size').value,unit:'mm'});
+        let pending = items.length;
+        items.forEach((it,i)=>{
+          if(i) pdf.addPage();
+          const img = new Image();
+          img.onload = ()=>{
+            const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+            const ratio = Math.min((pw-20)/img.width,(ph-20)/img.height);
+            const w = img.width*ratio, h = img.height*ratio;
+            pdf.addImage(img,'JPEG',(pw-w)/2,(ph-h)/2,w,h);
+            if(--pending===0){
+              const name = `sorted_jpg_${Date.now()}.pdf`;
+              pdf.save(name); historyPush('Multi JPG ke PDF', name); busy(false); showResult(`${items.length} halaman dibuat: ${name}`);
+            }
+          };
+          img.src = it.src;
+        });
+      };
+    }},
+
+  { id:'pdf-jpg', name:'PDF ke JPG', desc:'Render halaman PDF jadi gambar JPG.', icon:svg.img,
+    body:`<input type="file" id="f" accept="application/pdf" hidden>
+          <div class="drop" id="d">Pilih file PDF<small>Render halaman 1</small></div>
+          <div class="field"><label>Halaman</label><input type="text" id="page" value="1" /></div>
+          <div class="row"><select id="qual"><option value="0.92">Kualitas Tinggi</option><option value="0.7">Kualitas Sedang</option><option value="0.5">Kualitas Rendah</option></select><select id="fmt"><option value="image/jpeg">JPG</option><option value="image/png">PNG</option></select></div>
+          <div class="preview-box" id="pv" style="display:none"></div>
+          <button class="btn btn-block" id="go" disabled>Render &amp; Unduh</button>`,
+    init(){ const f=$('#f'), pv=$('#pv'); let data=null;
+      bindDrop(d,f, async files=>{
+        const file=files[0]; if(!file) return;
+        busy(true,'Membaca PDF...');
+        try{
+          const buf = await readFileAs(file,'arrayBuffer');
+          const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+          const n = Number($('#page').value)||1;
+          const page = await pdf.getPage(Math.min(n,pdf.numPages));
+          const vp = page.getViewport({scale:2});
+          const cv = document.createElement('canvas');
+          cv.width=vp.width; cv.height=vp.height;
+          await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+          data = cv.toDataURL($('#fmt').value, Number($('#qual').value));
+          pv.innerHTML=''; pv.appendChild(cv); cv.style.maxHeight='280px';
+          pv.style.display='block'; $('#go').disabled=false;
+          $('#page').max = pdf.numPages;
+          busy(false); toast(`PDF memiliki ${pdf.numPages} halaman`);
+        }catch(err){ busy(false); toast('Gagal membaca PDF'); }
+      });
+      $('#page').onchange = ()=> f.dispatchEvent(new Event('change'));
+      $('#go').onclick = ()=>{
+        const name = `pdfpage_${Date.now()}.${$('#fmt').value.includes('png')?'png':'jpg'}`;
+        downloadDataUrl(data,name); historyPush('PDF ke JPG',name);
+        showResult('Gambar berhasil dibuat: '+name);
+      };
+    }},
+
+  { id:'jpg-png', name:'JPG ke PNG', desc:'Konversi format gambar JPG ke PNG.', icon:svg.png,
+    body:`<input type="file" id="f" accept="image/jpeg,image/png" hidden>
+          <div class="drop" id="d">Pilih gambar<small>JPG / PNG</small></div>
+          <div class="preview-box" id="pv" style="display:none"><img id="prev"></div>
+          <div class="row"><select id="fmt"><option value="image/png">PNG</option><option value="image/jpeg">JPG</option></select><select id="qual"><option value="0.92">Kualitas Tinggi</option><option value="0.7">Kualitas Sedang</option><option value="0.5">Kualitas Rendah</option></select></div>
+          <button class="btn btn-block" id="go" disabled>Konversi</button>`,
+    init(){ const f=$('#f');
+      bindDrop(d,f, async files=>{
+        const file=files[0]; if(!file) return;
+        const src = await readFileAs(file);
+        const img = new Image();
+        img.onload = ()=>{
+          const cv=document.createElement('canvas'); cv.width=img.width; cv.height=img.height;
+          cv.getContext('2d').drawImage(img,0,0);
+          state.src = cv.toDataURL($('#fmt').value, Number($('#qual').value));
+          $('#prev').src = state.src; $('#pv').style.display='block'; $('#go').disabled=false;
+        };
+        img.src = src;
+      });
+      $('#go').onclick = ()=>{
+        const ext = $('#fmt').value==='image/png'?'png':'jpg';
+        const name = `converted_${Date.now()}.${ext}`;
+        downloadDataUrl(state.src,name); historyPush('JPG ke PNG',name);
+        showResult('Berkas berhasil dibuat: '+name);
+      };
+    }},
+
+  { id:'pdf-png', name:'PDF ke PNG', desc:'Halaman PDF jadi gambar PNG.', icon:svg.png,
+    body:`<input type="file" id="f" accept="application/pdf" hidden>
+          <div class="drop" id="d">Pilih file PDF</div>
+          <div class="field"><label>Halaman</label><input type="text" id="page" value="1" /></div>
+          <div class="preview-box" id="pv" style="display:none"></div>
+          <button class="btn btn-block" id="go" disabled>Render &amp; Unduh PNG</button>`,
+    init(){ const f=$('#f'), pv=$('#pv'); let data=null;
+      bindDrop(d,f, async files=>{
+        const file=files[0]; if(!file) return;
+        busy(true,'Merender...');
+        try{
+          const buf = await readFileAs(file,'arrayBuffer');
+          const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+          const page = await pdf.getPage(Math.min(Number($('#page').value)||1,pdf.numPages));
+          const vp = page.getViewport({scale:2});
+          const cv=document.createElement('canvas'); cv.width=vp.width; cv.height=vp.height;
+          await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+          data = cv.toDataURL('image/png');
+          pv.innerHTML=''; pv.appendChild(cv); cv.style.maxHeight='280px';
+          pv.style.display='block'; $('#go').disabled=false; $('#page').max=pdf.numPages;
+          busy(false);
+        }catch(err){ busy(false); toast('Gagal membaca PDF'); }
+      });
+      $('#page').onchange = ()=>{ if(f.files.length) f.dispatchEvent(new Event('change')); };
+      $('#go').onclick = ()=>{
+        const name=`pdfpage_${Date.now()}.png`;
+        downloadDataUrl(data,name); historyPush('PDF ke PNG',name);
+        showResult('PNG berhasil dibuat: '+name);
+      };
+    }},
+
+  { id:'pdf-text', name:'Extract Teks PDF', desc:'Ambil teks dari file PDF lalu salin.', icon:svg.text,
+    body:`<input type="file" id="f" accept="application/pdf" hidden>
+          <div class="drop" id="d">Pilih file PDF<small>Ekstraksi berjalan di perangkat</small></div>
+          <textarea id="out" rows="10" placeholder="Hasil teks akan muncul di sini..."></textarea>
+          <div class="row"><button class="btn" id="copy">Salin Teks</button><button class="btn btn-ghost" id="dl">Unduh .txt</button></div>`,
+    init(){ const f=$('#f');
+      bindDrop(d,f, async files=>{
+        const file=files[0]; if(!file) return;
+        busy(true,'Mengekstraksi teks...');
+        try{
+          const buf = await readFileAs(file,'arrayBuffer');
+          const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+          let text='';
+          for(let p=1;p<=pdf.numPages;p++){
+            const page = await pdf.getPage(p);
+            const tc = await page.getTextContent();
+            text += tc.items.map(i=>i.str).join(' ')+'\n\n';
+          }
+          $('#out').value = text.trim();
+          busy(false); toast('Terekstraksi '+pdf.numPages+' halaman');
+        }catch(err){ busy(false); toast('Gagal mengekstraksi teks'); }
+      });
+      $('#copy').onclick = ()=>{
+        navigator.clipboard.writeText($('#out').value).then(()=>toast('Teks disalin'));
+      };
+      $('#dl').onclick = ()=>{
+        const blob = new Blob([$('#out').value],{type:'text/plain'});
+        const name = `text_${Date.now()}.txt`;
+        saveBlob(blob,name); historyPush('Extract Teks PDF',name);
+      };
+    }},
+
+  { id:'merge-pdf', name:'Gabung PDF', desc:'Satukan beberapa PDF, atur urutan.', icon:svg.merge,
+    body:`<input type="file" id="f" accept="application/pdf" multiple hidden>
+          <div class="drop" id="d">Pilih beberapa file PDF<small>Minimal 2 file</small></div>
+          <div class="list" id="list"></div>
+          <button class="btn btn-block" id="go" disabled>Gabungkan PDF</button>`,
+    init(){ const f=$('#f'), list=$('#list'); let files=[];
+      bindDrop(d,f, fl=>{
+        files=[...fl];
+        list.innerHTML='';
+        files.forEach(file=>{
+          const row=document.createElement('div');
+          row.className='sort-item';
+          row.innerHTML=`<span class="grip">≡</span><span></span><small>${(file.size/1024).toFixed(0)} KB</small><button title="Hapus">&times;</button>`;
+          row.querySelector('span:nth-child(2)').textContent = file.name;
+          row.querySelector('button').onclick=()=>{ row.remove(); files=files.filter(x=>x!==file); $('#go').disabled=files.length<2; };
+          list.appendChild(row);
+        });
+        $('#go').disabled = files.length < 2;
+      });
+      new Sortable(list,{animation:150,onEnd:()=>{
+        files = [...list.children].map(r=>files.find(x=>x.name===r.querySelector('span:nth-child(2)').textContent)).filter(Boolean);
+      }});
+      $('#go').onclick = async ()=>{
+        if(files.length<2) return toast('Pilih minimal dua file PDF');
+        busy(true,'Menggabungkan...');
+        try{
+          const merged = await PDFLib.PDFDocument.create();
+          for(const file of files){
+            const src = await PDFLib.PDFDocument.load(await file.arrayBuffer());
+            const pages = await merged.copyPages(src, src.getPageIndices());
+            pages.forEach(p=>merged.addPage(p));
+          }
+          const name = `gabunganpdf_${Date.now()}.pdf`;
+          saveBlob(new Blob([await merged.save()],{type:'application/pdf'}), name);
+          historyPush('Gabung PDF',name); busy(false); showResult('PDF gabungan berhasil: '+name);
+        }catch(err){ busy(false); toast('Gagal menggabungkan PDF'); }
+      };
+    }},
+
+  { id:'zip', name:'Kompresor ZIP', desc:'Gabung & kompres banyak file jadi satu ZIP.', icon:svg.zip,
+    body:`<input type="file" id="f" multiple hidden>
+          <div class="drop" id="d">Pilih file untuk dikompres<small>Bisa apa saja</small></div>
+          <div class="list" id="list"></div>
+          <div class="field"><label>Level Kompresi</label><select id="lvl"><option value="9">Maksimal (9)</option><option value="6">Seimbang (6)</option><option value="1">Cepat (1)</option></select></div>
+          <button class="btn btn-block" id="go" disabled>Buat ZIP</button>`,
+    init(){ const f=$('#f'), list=$('#list'); let files=[];
+      bindDrop(d,f, fl=>{
+        files=[...fl];
+        list.innerHTML='';
+        files.forEach(file=>{
+          const row=document.createElement('div');
+          row.className='sort-item';
+          row.innerHTML=`<span class="grip">≡</span><span></span><small>${(file.size/1024).toFixed(1)} KB</small><button title="Hapus">&times;</button>`;
+          row.querySelector('span:nth-child(2)').textContent = file.name;
+          row.querySelector('button').onclick=()=>{ row.remove(); files=files.filter(x=>x!==file); $('#go').disabled=!files.length; };
+          list.appendChild(row);
+        });
+        $('#go').disabled = !files.length;
+      });
+      new Sortable(list,{animation:150,onEnd:()=>{
+        files = [...list.children].map(r=>files.find(x=>x.name===r.querySelector('span:nth-child(2)').textContent)).filter(Boolean);
+      }});
+      $('#go').onclick = async ()=>{
+        if(!files.length) return toast('Pilih file terlebih dahulu');
+        busy(true,'Mengompres...');
+        const zip = new JSZip();
+        const total = files.reduce((a,b)=>a+b.size,0);
+        files.forEach(file=>zip.file(file.name,file));
+        const blob = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:Number($('#lvl').value)}});
+        const name = `compressed_${Date.now()}.zip`;
+        saveBlob(blob,name); historyPush('Kompresor ZIP',name); busy(false);
+        const ratio = total? Math.round((1-blob.size/total)*100) : 0;
+        showResult(`ZIP dibuat: ${name} (hemat ~${ratio}%)`);
+      };
+    }}
+];
+
+/* =========================================================
+   RENDER GRID + SEARCH
+   ========================================================= */
+const grid = $('#grid');
+TOOLS.forEach(tool=>{
+  const btn = document.createElement('button');
+  btn.className='card'; btn.dataset.name = tool.name.toLowerCase();
+  btn.innerHTML = `<div class="card-ico">${icon(tool.icon)}</div>
+    <h3>${tool.name}</h3><p>${tool.desc}</p>
+    <span class="card-go">Buka Tool &rarr;</span>`;
+  btn.onclick = ()=>openTool(tool);
+  grid.appendChild(btn);
+});
+$('#search').addEventListener('input', e=>{
+  const q = e.target.value.toLowerCase().trim();
+  let shown=0;
+  grid.querySelectorAll('.card').forEach(c=>{
+    const hit = c.dataset.name.includes(q);
+    c.style.display = hit?'':'none';
+    if(hit) shown++;
+  });
+  $('#empty').style.display = shown? 'none':'block';
+});
+
+/* =========================================================
+   MODAL
+   ========================================================= */
+function openTool(tool){
+  $('#sheetTitle').textContent = tool.name;
+  $('#sheetDesc').textContent = tool.desc;
+  sheetBody.innerHTML = tool.body;
+  modal.classList.add('open');
+  document.body.style.overflow='hidden';
+  try{ tool.init(); }catch(e){ console.error(e); }
+}
+function closeTool(){
+  modal.classList.remove('open');
+  document.body.style.overflow='';
+  sheetBody.innerHTML='';
+  for(const k in state) delete state[k];
+}
+$('#sheetClose').onclick = closeTool;
+modal.addEventListener('click', e=>{ if(e.target===modal) closeTool(); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape' && modal.classList.contains('open')) closeTool(); });
+
+/* =========================================================
+   INIT
+   ========================================================= */
+if(window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.162/pdf.worker.min.js';
+$('#year').textContent = new Date().getFullYear();
+renderHistory();
+</script>
 </body>
 </html>
-
