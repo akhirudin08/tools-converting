@@ -178,9 +178,24 @@ a.btn-ghost{color:#2F3A1D}
 .fav-head .hint{font-size:.82rem}
 #favGrid{
   border:2px dashed rgba(47,58,29,.22);border-radius:var(--radius-lg);padding:14px;
-  background:rgba(207,255,116,.16);
+  background:rgba(207,255,116,.14);min-height:104px;transition:background .18s,border-color .18s,box-shadow .18s;
 }
-#favGrid:empty{display:none}
+#favGrid:empty::before{
+  content:"Seret kartu ke sini untuk dijadikan favorit";
+  display:block;text-align:center;color:var(--ink-mute);font-weight:600;font-size:.85rem;padding:30px 12px;
+}
+.fav-drop{
+  border-color:#CFFF74!important;background:rgba(207,255,116,.5)!important;
+  box-shadow:0 0 0 4px rgba(207,255,116,.4);transform:scale(1.012);
+}
+.drag-hint{
+  position:fixed;z-index:300;pointer-events:none;background:#2F3A1D;color:#CFFF74;
+  font-weight:700;font-size:.82rem;padding:9px 16px;border-radius:999px;
+  box-shadow:0 12px 26px -12px rgba(0,0,0,.6);opacity:0;transform:translate(-50%,-160%);
+  transition:opacity .15s,background .15s;white-space:nowrap;
+}
+.drag-hint.on{opacity:1}
+.drag-hint.go{background:#CFFF74;color:#2F3A1D}
 .fav-btn{
   position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:50%;
   display:grid;place-items:center;font-size:1rem;color:var(--ink-mute);
@@ -189,9 +204,10 @@ a.btn-ghost{color:#2F3A1D}
 .fav-btn:hover{transform:scale(1.15);color:#C0552F}
 .card.on-fav .fav-btn{background:#CFFF74;color:#2F3A1D}
 .card.on-fav{border-color:#CFFF74}
-.sortable-ghost{opacity:.35}
-.sortable-drag{transform:rotate(2deg) scale(1.02);box-shadow:var(--shadow)}
-.fav-drop{background:rgba(207,255,116,.55)!important;border-color:#CFFF74!important}
+.card.star-pop{animation:starPop .45s cubic-bezier(.2,1.4,.4,1)}
+@keyframes starPop{0%{transform:scale(1)}35%{transform:scale(1.1)}60%{transform:scale(.98)}100%{transform:scale(1)}}
+.sortable-ghost{opacity:.3}
+.sortable-drag{opacity:.92;box-shadow:var(--shadow);border-color:#CFFF74!important}
 
 /* ---------- GABUNG PDF + GAMBAR ---------- */
 .mix-list{list-style:none;display:flex;flex-direction:column;gap:8px;width:100%;max-width:640px;margin:0 auto}
@@ -509,11 +525,11 @@ footer strong{color:var(--ink);font-weight:700}
         <button class="btn btn-ghost btn-sm" id="resetOrder">Reset urutan</button>
       </div>
     </div>
-    <div class="fav-head" id="favHead" hidden>
+    <div class="fav-head" id="favHead">
       <span class="fav-title">&#9733; Favorit</span>
-      <span class="hint">Seret dari bawah ke sini untuk menambahkan</span>
+      <span class="hint">Seret kartu ke kotak ini untuk menjadikannya favorit</span>
     </div>
-    <div class="grid" id="favGrid" data-fav="1" hidden></div>
+    <div class="grid" id="favGrid" data-fav="1"></div>
     <div class="grid" id="grid" style="margin-top:14px"></div>
     <p class="empty" id="empty">Tool tidak ditemukan. Coba kata kunci lain.</p>
   </section>
@@ -2748,22 +2764,25 @@ function applyLayout(){
   favGrid.innerHTML=''; grid.innerHTML='';
   favs.forEach(id=> favGrid.appendChild(cardOf[id]));
   rest.forEach(id=> grid.appendChild(cardOf[id]));
-  favs.forEach(id=> cardOf[id].classList.add('on-fav'));
-  favGrid.hidden = favHead.hidden = !favs.length;
+  favs.forEach(id=>{ cardOf[id].classList.add('on-fav'); cardOf[id].querySelector('.fav-btn').textContent='★'; });
+  rest.forEach(id=> cardOf[id].classList.remove('on-fav'));
 }
 function saveOrder(){
   localStorage.setItem(KEY_ORD, JSON.stringify([...grid.children].map(c=>c.dataset.id)));
 }
 function saveFav(){
   localStorage.setItem(KEY_FAV, JSON.stringify([...favGrid.children].map(c=>c.dataset.id)));
-  favGrid.hidden = favHead.hidden = !favGrid.children.length;
 }
 function toggleFav(id){
   const el = cardOf[id];
-  if(favGrid.contains(el)) grid.appendChild(el);
+  const wasFav = favGrid.contains(el);
+  if(wasFav) grid.appendChild(el);
   else favGrid.prepend(el);
-  el.classList.toggle('on-fav', favGrid.contains(el));
+  el.classList.toggle('on-fav', !wasFav);
+  el.classList.remove('star-pop'); void el.offsetWidth; el.classList.add('star-pop');
+  el.querySelector('.fav-btn').textContent = wasFav? '☆' : '★';
   saveFav(); saveOrder();
+  toast(wasFav ? 'Dihapus dari favorit' : '★ Ditambahkan ke favorit');
 }
 $('#resetOrder').onclick = ()=>{
   localStorage.removeItem(KEY_ORD); localStorage.removeItem(KEY_FAV);
@@ -2773,6 +2792,39 @@ $('#resetOrder').onclick = ()=>{
 let dragId = null;
 document.addEventListener('pointerdown', e=>{ const c=e.target.closest('.card'); dragId = c? c.dataset.id : null; });
 document.addEventListener('touchstart', e=>{ const c=e.target.closest('.card'); dragId = c? c.dataset.id : null; }, {passive:true});
+
+// ===== umpan balik real-time saat menyeret =====
+const hint = document.createElement('div');
+hint.className = 'drag-hint';
+document.body.appendChild(hint);
+const inRect = (r,x,y)=> x>=r.left && x<=r.right && y>=r.top && y<=r.bottom;
+
+document.addEventListener('pointermove', e=>{
+  if(!dragId) return;
+  const x = e.clientX, y = e.clientY;
+  hint.style.left = x+'px'; hint.style.top = y+'px';
+  const overFav = inRect(favGrid.getBoundingClientRect(), x, y);
+  const overMain = inRect(grid.getBoundingClientRect(), x, y);
+  const isFav = favGrid.contains(cardOf[dragId]);
+  const target = overFav || overMain;
+  hint.classList.add('on');
+  const willBeFav = overFav || (!isFav && overMain);
+  hint.classList.toggle('go', willBeFav);
+  hint.textContent = willBeFav ? '★ Lepas di sini → Favorit' : 'Seret untuk mengurutkan';
+  favGrid.classList.toggle('fav-drop', overFav);
+  grid.classList.toggle('fav-drop', overMain && isFav);
+}, {passive:true});
+
+function endDrag(){
+  if(!dragId) return;
+  dragId = null;
+  hint.classList.remove('on');
+  favGrid.classList.remove('fav-drop');
+  grid.classList.remove('fav-drop');
+}
+document.addEventListener('pointerup', endDrag);
+document.addEventListener('pointercancel', endDrag);
+document.addEventListener('scroll', endDrag, {passive:true, capture:true});
 
 const onSort = ()=>{ if(dragId && cardOf[dragId]) cardOf[dragId].classList.toggle('on-fav', favGrid.contains(cardOf[dragId])); };
 const onAdd   = ()=>{ onSort(); saveFav(); saveOrder(); };
