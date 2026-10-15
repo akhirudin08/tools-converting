@@ -2706,36 +2706,178 @@ const TOOLS = [
       $('#ugen').click();
     }},
 
-  { id:'pdf-word', name:'PDF ke Word', desc:'Teks PDF jadi file .docx yang bisa diedit.', icon:svg.doc,
+  { id:'pdf-word', name:'PDF ke Word', desc:'Teks + gambar PDF jadi file .docx.', icon:svg.doc,
     body:`<input type="file" id="f" accept="application/pdf" hidden>
           <div class="drop" id="d">Upload PDF<small>Hasilnya .docx (bisa dibuka di Word / Google Docs)</small></div>
+          <div class="field"><label>Mode konversi</label><select id="mode">
+            <option value="img">Teks + gambar (dapat diedit, gambar ikut)</option>
+            <option value="text">Teks saja</option>
+            <option value="visual">Visual — halaman jadi gambar (mirip aslinya, tidak bisa diedit)</option>
+          </select></div>
           <div class="grid2">
-            <div class="field"><label>Susunan teks</label><select id="mode"><option value="page">Pisah per halaman</option><option value="all">Gabung semua halaman</option></select></div>
+            <div class="field"><label>Susunan teks</label><select id="layout"><option value="page">Pisah per halaman</option><option value="all">Gabung semua halaman</option></select></div>
             <div class="field"><label>Ukuran font</label><select id="fs"><option value="22">11 pt</option><option value="24" selected>12 pt</option><option value="32">16 pt</option></select></div>
           </div>
-          <label class="hint" style="display:flex;gap:8px;align-items:center;cursor:pointer">
-            <input type="checkbox" id="pos" checked style="width:auto;accent-color:#CFFF74" /> Pertahankan posisi baris (reproduksi layout)
+          <div class="field" id="qBox" style="display:none"><label>Kualitas gambar <span id="qVal" class="hint" style="float:right">80</span></label>
+            <input type="range" id="q" min="40" max="95" value="80" style="width:100%;accent-color:#CFFF74" /></div>
+          <label class="hint" style="display:flex;gap:8px;align-items:center;cursor:pointer" id="posWrap">
+            <input type="checkbox" id="pos" checked style="width:auto;accent-color:#CFFF74" /> Pertahankan posisi baris
           </label>
           <button class="btn btn-block" id="go" disabled>Unduh .docx</button>
-          <p class="hint">Catatan: PDF hasil scan tidak punya teks — pakai tool OCR dulu.</p>`,
-    init(){
+          <p class="hint" id="note">Mode <b>Teks + gambar</b> menyisipkan gambar asli dari PDF (logo, tabel, grafik). Posisi gambar diletakkan berurutan setelah teks tiap halaman, jadi belum persis seperti di PDF.</p>`,
+init(){
       const f=$('#f');
       let bytes=null;
+      $('#mode').onchange = ()=>{
+        const m = $('#mode').value;
+        $('#qBox').style.display = m==='visual'? 'block':'none';
+        $('#posWrap').style.display = m==='text'? 'none':'block';
+        $('#layout').parentElement.style.display = m==='visual'? 'none':'block';
+        $('#fs').parentElement.style.display = m==='visual'? 'none':'block';
+        $('#note').innerHTML = m==='visual'
+          ? 'Mode <b>Visual</b>: tiap halaman jadi satu gambar (tampilan 100% mirip PDF, tapi teksnya tidak bisa diedit).'
+          : m==='text'
+            ? 'Mode <b>Teks saja</b>: paling ringan, tapi gambar/logo tidak ikut.'
+            : 'Mode <b>Teks + gambar</b>: gambar asli PDF ikutdisisipkan, tapi posisinya diletakkan berurutan setelah teks tiap halaman.';
+      };
+      $('#q').oninput = e=> $('#qVal').textContent = e.target.value;
       bindDrop($('#d'), f, async fl=>{
         const file=fl[0]; if(!file) return;
         bytes = new Uint8Array(await file.arrayBuffer());
         $('#go').disabled=false; toast(file.name+' dimuat');
       });
+
+      // ===== ambil gambar yang tertanam di halaman PDF =====
+      async function extractImages(page){
+        const OPS = pdfjsLib.OPS, out=[], seen=new Set();
+        let transform=null; const stack=[];
+        try{
+          const list = await page.getOperatorList();
+          await new Promise(res=>{ page.commonObjs && page.commonObjs.hasImages ? page.commonObjs.get(res) : res(); });
+          for(let i=0;i<list.fnArray.length;i++){
+            const fn = list.fnArray[i], args = list.argsArray[i];
+            if(fn===OPS.save) stack.push(transform);
+            else if(fn===OPS.restore) transform = stack.pop();
+            else if(fn===OPS.transform) transform = pdfjsLib.Util.transform(transform, args);
+            else if(fn===OPS.paintImageXObject || fn===OPS.paintJpegXObject){
+              const name = args[0];
+              const obj = page.objs.get(name);
+              if(!obj) continue;
+              let blob=null, w=obj.width||0, h=obj.height||0;
+              if(fn===OPS.paintJpegXObject && obj.data){
+                blob = new Blob([obj.data],{type:'image/jpeg'});
+              }else if(obj.bitmap){
+                w = obj.bitmap.width; h = obj.bitmap.height;
+                if(obj.bitmap.convertToBlob) blob = await obj.bitmap.convertToBlob({type:'image/png'});
+              }else if(obj.data && w && h){
+                const cv=document.createElement('canvas');
+                cv.width=w; cv.height=h;
+                cv.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(obj.data), w, h),0,0);
+                blob = await new Promise(r=>cv.toBlob(r,'image/png'));
+              }
+              if(!blob || blob.size < 1500) continue;
+              const bbox = transform ? pdfjsLib.Util.applyTransform([w||1,h||1], transform) : [w||1,h||1];
+              const dispW = Math.min(Math.abs(bbox[0]) || w || 1, 4000);
+              const dispH = Math.max(1, dispW * (h/(w||1)));
+              if(dispW < 40 || dispH < 40) continue;   // skip ikon kecil
+              const key = blob.size+'-'+Math.round(dispW)+'x'+Math.round(dispH);
+              if(seen.has(key)) continue;
+              seen.add(key);
+              out.push({ blob, w:dispW, h:dispH });
+            }
+          }
+        }catch(e){ console.warn('ekstrak gambar:', e); }
+        return out;
+      }
+
+      // ===== susun file .docx (teks + gambar) =====
+      async function buildDocx(blocks, fontSize){
+        const zip = new JSZip();
+        const esc = s=> String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const EMU = 9525, MAXW = 6100000;
+        const rels = [], parts = [];
+        let imgId = 0;
+        const body = blocks.map(b=>{
+          if(b.br) return '<w:p/>';
+          if(b.img){
+            imgId++;
+            const ext = b.img.type==='image/jpeg'? 'jpeg':'png';
+            const name = 'image'+imgId+'.'+(ext==='jpeg'?'jpg':ext);
+            const rid = 'rId'+(100+imgId);
+            rels.push('<Relationship Id="'+rid+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/'+name+'"/>');
+            parts.push({ name, blob:b.img });
+            const cx = Math.min(b.w*EMU, MAXW);
+            const cy = Math.max(1, Math.round(cx * (b.h/b.w)));
+            return '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing>'+
+              '<wp:inline distT="0" distB="0" distL="0" distR="0">'+
+              '<wp:extent cx="'+cx+'" cy="'+cy+'"/>'+
+              '<wp:docPr id="'+imgId+'" name="Picture '+imgId+'"/>'+
+              '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'+
+              '<pic:pic><pic:nvPicPr><pic:cNvPr id="'+imgId+'" name="'+name+'"/><pic:cNvPicPr/></pic:nvPicPr>'+
+              '<pic:blipFill><a:blip r:embed="'+rid+'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'+
+              '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm>'+
+              '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'+
+              '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
+          }
+          const bold = b.b? '<w:b/>' : '';
+          return String(b.text).split('\n').map(line=>
+            '<w:p><w:pPr><w:spacing w:after="60"/></w:pPr><w:r><w:rPr>'+bold+
+            '<w:sz w:val="'+fontSize+'"/></w:rPr><w:t xml:space="preserve">'+esc(line)+'</w:t></w:r></w:p>'
+          ).join('');
+        }).join('');
+
+        parts.forEach((p,i)=> zip.file('word/media/'+p.name, p.blob));
+
+        zip.file('[Content_Types].xml',
+`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`);
+        zip.file('_rels/.rels',
+`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
+        zip.file('word/_rels/document.xml.rels',
+`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">`+
+rels.join('')+
+`<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`);
+        zip.file('word/styles.xml',
+`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="`+fontSize+`"/></w:rPr></w:rPrDefault></w:docDefaults></w:styles>`);
+        zip.file('word/document.xml',
+`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>`+
+body+
+`<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr></w:body></w:document>`);
+
+        return zip.generateAsync({type:'blob',compression:'DEFLATE'});
+      }
+
       $('#go').onclick = async ()=>{
         if(!bytes) return toast('Upload PDF dulu');
-        busy(true,'Mengambil teks...');
+        const mode = $('#mode').value;
+        busy(true,'Membaca PDF...');
         try{
           const pdf = await pdfjsLib.getDocument({data:bytes.slice()}).promise;
-          const paras=[];
-          const perPage = $('#mode').value==='page';
+          const blocks=[];
+          const perPage = $('#layout').value==='page';
           const keepPos = $('#pos').checked;
+          const q = Number($('#q').value)/100;
+
           for(let i=1;i<=pdf.numPages;i++){
             const page = await pdf.getPage(i);
+            if(perPage){
+              if(i>1) blocks.push({br:true});
+              blocks.push({ text:'--- Halaman '+i+' ---', b:true });
+            }
+            if(mode==='visual'){
+              busy(true,'Merender halaman '+i+'/'+pdf.numPages+'...');
+              const vp = page.getViewport({scale:1.7});
+              const cv=document.createElement('canvas');
+              cv.width=Math.round(vp.width); cv.height=Math.round(vp.height);
+              await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+              const blob = await new Promise(r=>cv.toBlob(r,'image/jpeg',q));
+              blocks.push({ img:blob, w:cv.width, h:cv.height });
+              continue;
+            }
             const tc = await page.getTextContent();
             let line='', last=null;
             for(const item of tc.items){
@@ -2749,42 +2891,21 @@ const TOOLS = [
               if(keepPos && item.str) line += ' ';
               last = item;
             }
-            if(perPage){
-              if(i>1) paras.push({text:'', br:2});
-              paras.push({text:'--- Halaman '+i+' ---', b:true});
+            blocks.push({ text: line.trim() || ' ' });
+            if(mode==='img'){
+              busy(true,'Mengambil gambar halaman '+i+'...');
+              const imgs = await extractImages(page);
+              imgs.forEach(im=> blocks.push({ img:im.blob, w:im.w, h:im.h }));
             }
-            paras.push({text: line.trim() || ' '});
           }
           busy(true,'Menyusun .docx...');
-          const zip = new JSZip();
-          const esc = s=> s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-          const fs = Number($('#fs').value);
-          const body = paras.map(p=>{
-            if(p.br) return '<w:p/>';
-            const b = p.b? '<w:rPr><w:b/></w:rPr>' : '';
-            const parts = String(p.text).split('\n').map(line=>
-              '<w:p><w:pPr><w:spacing w:after="60"/></w:pPr><w:r>'+b+'<w:rPr><w:sz w:val="'+fs+'"/></w:rPr>'+
-              '<w:t xml:space="preserve">'+esc(line)+'</w:t></w:r></w:p>'
-            ).join('');
-            return parts;
-          }).join('');
-          zip.file('[Content_Types].xml',
-`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`);
-          zip.file('_rels/.rels',
-`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
-          zip.file('word/document.xml',
-`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>`+
-body+
-`<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr></w:body></w:document>`);
-          const blob = await zip.generateAsync({type:'blob',compression:'DEFLATE'});
+          const blob = await buildDocx(blocks, Number($('#fs').value));
           const name='dokumen.docx';
           saveBlob(blob, name);
           historyPush('PDF ke Word', name);
           busy(false);
-          showResult('Selesai: '+name);
+          const imgs = blocks.filter(b=>b.img).length;
+          showResult('Selesai: '+name+(imgs? ' · '+imgs+' gambar ikut tertanam':''));
         }catch(e){ busy(false); toast('Gagal: '+e.message); console.error(e); }
       };
     }},
