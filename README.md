@@ -41,6 +41,9 @@ Semua tool dibuka lewat satu dashboard (tanpa berpindah halaman):
 | Nomor & Tanggal Dokumen | Stempel nomor dokumen + tanggal, posisi bebas |
 | URL ke PDF | Simpan halaman web jadi PDF |
 | Generator & Hash | Password acak, UUID v4, hash SHA-256 |
+| PDF ke Word | Ekstrak teks PDF ke file .docx yang bisa diedit |
+| Edit PDF (Tambah Teks) | Klik halaman, tambah teks vektor, geser posisi, simpan |
+| Isi Form PDF | Isi kolom AcroForm (text, checkbox, dropdown, radio) lalu ratakan |
 
 Semua工具 berjalan di browser. Library berat (Mammoth, SheetJS, Tesseract, enkripsi PDF) **dimuat on-demand** saat tool dipakai, bukan saat halaman dibuka.
 

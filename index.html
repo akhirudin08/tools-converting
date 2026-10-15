@@ -144,6 +144,16 @@ a.btn-ghost{color:#2F3A1D}
 .card-go{margin-top:auto;display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:.85rem;color:var(--ink)}
 .empty{text-align:center;padding:50px 20px;color:var(--ink-mute);font-weight:600;display:none}
 
+/* ---------- EDIT PDF ---------- */
+.mark{
+  position:absolute;transform:translate(0,-50%);max-width:80%;padding:2px 6px;border-radius:6px;
+  background:rgba(207,255,116,.28);border:1px dashed rgba(47,58,29,.35);
+  white-space:pre-wrap;line-height:1.25;cursor:grab;touch-action:none;user-select:none;
+}
+.mark:active{cursor:grabbing}
+.mark button{position:absolute;top:-9px;right:-9px;width:19px;height:19px;border:none;border-radius:50%;background:#E0564B;color:#fff;font-size:.7rem;cursor:pointer;display:none;line-height:1}
+.mark:hover button{display:block}
+
 /* ---------- TOOL UMUM ---------- */
 .page-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;max-height:44vh;overflow:auto;padding:4px}
 .page-item{border:2px solid rgba(47,58,29,.14);border-radius:12px;overflow:hidden;cursor:pointer;background:var(--paper);position:relative;transition:.15s}
@@ -504,7 +514,7 @@ footer strong{color:var(--ink);font-weight:700}
   </div>
 
   <section class="stats">
-    <div class="stat reveal"><b data-count="29">0</b><span>Tools Konversi</span></div>
+    <div class="stat reveal"><b data-count="32">0</b><span>Tools Konversi</span></div>
     <div class="stat reveal"><b data-count="6">0</b><span>Format Didukung</span></div>
     <div class="stat reveal"><b data-count="100" data-suffix="%">0</b><span>Gratis &amp; Lokal</span></div>
   </section>
@@ -731,6 +741,8 @@ const toggleItem = item=>{
   item.on = !item.on;
   item.el.classList.toggle('on', item.on);
 };
+const escHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const escAttr = s => escHtml(s).replace(/"/g,'&quot;');
 
 /* =========================================================
    TOOL DEFINITIONS
@@ -761,7 +773,10 @@ const svg = {
   lock:'<rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
   hash:'<path d="M6 9h12M6 15h12M10 4 8 20M16 4l-2 16"/>',
   globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14 0 18-3-4-3-14.5 0-18z"/>',
-  key:'<circle cx="8" cy="15" r="4"/><path d="M11 12 20 3M17 6l2 2M14 9l2 2"/>'
+  key:'<circle cx="8" cy="15" r="4"/><path d="M11 12 20 3M17 6l2 2M14 9l2 2"/>',
+  doc:'<path d="M14 3v5h5"/><path d="M6 3h8l5 5v13H6z"/><path d="M9 12h7M9 16h7"/>',
+  penedit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  form:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h4"/>'
 };
 const icon = p => `<svg viewBox="0 0 24 24" fill="none" stroke="#2F3A1D" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 
@@ -1063,7 +1078,7 @@ const TOOLS = [
             </section>
           </aside>
           <div class="fv-main">
-            <div class="pdf-empty" id="empty">Upload PDF untuk menampilkan halaman.<br><small>Tanda tangan bisa digeser, diperkecil (pojok kanan bawah), dan dihapus.</small></div>
+            <div class="pdf-empty" id="tEmpty">Upload PDF untuk menampilkan halaman.<br><small>Tanda tangan bisa digeser, diperkecil (pojok kanan bawah), dan dihapus.</small></div>
             <div class="fv-pages" id="scroll" hidden></div>
           </div>`,
     init(){
@@ -1096,7 +1111,7 @@ const TOOLS = [
       async function renderPdf(){
         const pdf = await loadPdf(pdfBytes);
         pageCount = pdf.numPages;
-        scroll.innerHTML=''; scroll.hidden=false; $('#empty').hidden=true;
+        scroll.innerHTML=''; scroll.hidden=false; $('#tEmpty').hidden=true;
         const dpr = window.devicePixelRatio||1;
         const W = Math.min(scroll.clientWidth||720, 860);
         for(let i=1;i<=pageCount;i++){
@@ -1326,7 +1341,7 @@ const TOOLS = [
             </section>
           </aside>
           <div class="fv-main">
-            <div class="pdf-empty" id="empty">Upload PDF atau gambar untuk mulai.<br><small>Urutan di sidebar menentukan urutan halaman di PDF hasil.</small></div>
+            <div class="pdf-empty" id="tEmpty">Upload PDF atau gambar untuk mulai.<br><small>Urutan di sidebar menentukan urutan halaman di PDF hasil.</small></div>
             <ul class="mix-list" id="list" hidden></ul>
           </div>`,
     init(){
@@ -1349,7 +1364,7 @@ const TOOLS = [
       }
       function render(){
         list.hidden = !items.length;
-        empty.hidden = !!items.length;
+        tEmpty.hidden = !!items.length;
         list.innerHTML='';
         items.forEach(it=>{
           const li=document.createElement('li');
@@ -1640,14 +1655,14 @@ const TOOLS = [
   { id:'split-pdf', name:'Split Halaman PDF', desc:'Pilih halaman, pisah jadi PDF baru.', icon:svg.cut,
     body:`<input type="file" id="f" accept="application/pdf" hidden>
           <div class="drop" id="d">Upload PDF<small>Klik halaman untuk pilih / batal pilih</small></div>
-          <div class="page-grid" id="grid" hidden></div>
+          <div class="page-grid" id="sgrid" hidden></div>
           <div class="row-list" id="sum" hidden></div>
           <div class="grid2" style="display:none" id="acts">
             <button class="btn" id="sel" disabled>Simpan Halaman Terpilih</button>
             <button class="btn btn-ghost" id="per" disabled>Pisah Per Halaman (ZIP)</button>
           </div>`,
     init(){
-      const f=$('#f'), grid=$('#grid');
+      const f=$('#f'), grid=$('#sgrid');
       let bytes=null, numPages=0, sel=new Set();
 
       bindDrop($('#d'), f, async files=>{
@@ -2424,11 +2439,11 @@ const TOOLS = [
   { id:'delete-pages', name:'Hapus Halaman PDF', desc:'Buang halaman yang tidak diperlukan.', icon:svg.trash,
     body:`<input type="file" id="f" accept="application/pdf" hidden>
           <div class="drop" id="d">Upload PDF<small>Klik halaman yang mau dihapus (abu = disimpan)</small></div>
-          <div class="page-grid" id="grid" hidden></div>
+          <div class="page-grid" id="sgrid" hidden></div>
           <p class="hint" id="info" hidden></p>
           <button class="btn btn-block" id="go" disabled>Simpan Tanpa Halaman Terpilih</button>`,
     init(){
-      const f=$('#f'), grid=$('#grid');
+      const f=$('#f'), grid=$('#sgrid');
       let bytes=null, items=[];
       bindDrop($('#d'), f, async fl=>{
         const file=fl[0]; if(!file) return;
@@ -2689,6 +2704,314 @@ const TOOLS = [
       $('#hcopy').onclick = ()=> navigator.clipboard.writeText($('#hout').textContent).then(()=>toast('Hash disalin'));
       $('#pgen').click();
       $('#ugen').click();
+    }},
+
+  { id:'pdf-word', name:'PDF ke Word', desc:'Teks PDF jadi file .docx yang bisa diedit.', icon:svg.doc,
+    body:`<input type="file" id="f" accept="application/pdf" hidden>
+          <div class="drop" id="d">Upload PDF<small>Hasilnya .docx (bisa dibuka di Word / Google Docs)</small></div>
+          <div class="grid2">
+            <div class="field"><label>Susunan teks</label><select id="mode"><option value="page">Pisah per halaman</option><option value="all">Gabung semua halaman</option></select></div>
+            <div class="field"><label>Ukuran font</label><select id="fs"><option value="22">11 pt</option><option value="24" selected>12 pt</option><option value="32">16 pt</option></select></div>
+          </div>
+          <label class="hint" style="display:flex;gap:8px;align-items:center;cursor:pointer">
+            <input type="checkbox" id="pos" checked style="width:auto;accent-color:#CFFF74" /> Pertahankan posisi baris (reproduksi layout)
+          </label>
+          <button class="btn btn-block" id="go" disabled>Unduh .docx</button>
+          <p class="hint">Catatan: PDF hasil scan tidak punya teks — pakai tool OCR dulu.</p>`,
+    init(){
+      const f=$('#f');
+      let bytes=null;
+      bindDrop($('#d'), f, async fl=>{
+        const file=fl[0]; if(!file) return;
+        bytes = new Uint8Array(await file.arrayBuffer());
+        $('#go').disabled=false; toast(file.name+' dimuat');
+      });
+      $('#go').onclick = async ()=>{
+        if(!bytes) return toast('Upload PDF dulu');
+        busy(true,'Mengambil teks...');
+        try{
+          const pdf = await pdfjsLib.getDocument({data:bytes.slice()}).promise;
+          const paras=[];
+          const perPage = $('#mode').value==='page';
+          const keepPos = $('#pos').checked;
+          for(let i=1;i<=pdf.numPages;i++){
+            const page = await pdf.getPage(i);
+            const tc = await page.getTextContent();
+            let line='', last=null;
+            for(const item of tc.items){
+              if(keepPos && last){
+                const gapY = Math.abs(last.transform[5] - item.transform[5]);
+                const gapX = item.transform[4] - (last.transform[4] + last.width);
+                if(gapY > Math.max(2, last.height*0.4)){ line += '\n'; }
+                else if(gapX > last.height*0.8) line += '    ';
+              }
+              line += item.str;
+              if(keepPos && item.str) line += ' ';
+              last = item;
+            }
+            if(perPage){
+              if(i>1) paras.push({text:'', br:2});
+              paras.push({text:'--- Halaman '+i+' ---', b:true});
+            }
+            paras.push({text: line.trim() || ' '});
+          }
+          busy(true,'Menyusun .docx...');
+          const zip = new JSZip();
+          const esc = s=> s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          const fs = Number($('#fs').value);
+          const body = paras.map(p=>{
+            if(p.br) return '<w:p/>';
+            const b = p.b? '<w:rPr><w:b/></w:rPr>' : '';
+            const parts = String(p.text).split('\n').map(line=>
+              '<w:p><w:pPr><w:spacing w:after="60"/></w:pPr><w:r>'+b+'<w:rPr><w:sz w:val="'+fs+'"/></w:rPr>'+
+              '<w:t xml:space="preserve">'+esc(line)+'</w:t></w:r></w:p>'
+            ).join('');
+            return parts;
+          }).join('');
+          zip.file('[Content_Types].xml',
+`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`);
+          zip.file('_rels/.rels',
+`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
+          zip.file('word/document.xml',
+`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>`+
+body+
+`<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr></w:body></w:document>`);
+          const blob = await zip.generateAsync({type:'blob',compression:'DEFLATE'});
+          const name='dokumen.docx';
+          saveBlob(blob, name);
+          historyPush('PDF ke Word', name);
+          busy(false);
+          showResult('Selesai: '+name);
+        }catch(e){ busy(false); toast('Gagal: '+e.message); console.error(e); }
+      };
+    }},
+
+  { id:'edit-pdf', name:'Edit PDF (Tambah Teks)', desc:'Klik di halaman, ketik teks, simpan.', icon:svg.penedit, full:true,
+    body:`<aside class="fv-side">
+            <section>
+              <h4>1 &middot; Dokumen</h4>
+              <input type="file" id="f" accept="application/pdf" hidden>
+              <div class="drop" id="d">Upload PDF</div>
+            </section>
+            <section>
+              <h4>2 &middot; Teks</h4>
+              <div class="field"><label>Teks</label><textarea id="txt" rows="3" placeholder="Ketik teks, lalu klik halaman"></textarea></div>
+              <div class="field"><label>Ukuran (pt)</label><input type="text" id="size" value="14" /></div>
+              <div class="field"><label>Warna</label><input type="color" id="color" value="#2F3A1D" style="width:100%;height:42px;border:none;border-radius:12px;background:transparent" /></div>
+              <div class="field"><label>Font</label><select id="font"><option value="Helvetica">Sans-serif</option><option value="TimesRoman">Serif</option><option value="Courier">Monospace</option></select></div>
+              <label class="hint" style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="bold" style="width:auto;accent-color:#CFFF74" /> Tebal</label>
+            </section>
+            <section>
+              <h4>3 &middot; Bantuan</h4>
+              <p class="hint">Klik di halaman PDF untuk menaruh teks. Geser untuk memindahkan, klik &times; untuk menghapus. Teks ditambahkan sebagai teks vektor, bukan gambar.</p>
+              <button class="btn btn-sm btn-block" id="clr" style="margin-top:10px">Hapus Semua Teks</button>
+            </section>
+          </aside>
+          <div class="fv-main">
+            <div class="pdf-empty" id="tEmpty">Upload PDF untuk mulai mengedit.</div>
+            <div class="fv-pages" id="pages" hidden></div>
+          </div>`,
+    init(){
+      const f=$('#f'), pages=$('#pages'), goBtn=$('#fvGo');
+      $('#fvDesc').textContent = 'Tambah teks ke PDF, posisi bebas';
+      $('#fvGo').textContent = 'Unduh PDF hasil edit';
+      let bytes=null, marks=[], uid=0;
+
+      bindDrop($('#d'), f, async fl=>{
+        const file=fl[0]; if(!file) return;
+        busy(true,'Membaca PDF...');
+        try{
+          bytes = new Uint8Array(await file.arrayBuffer());
+          await render();
+          busy(false); goBtn.disabled=false; marks=[]; uid=0;
+          toast('Klik di halaman untuk menaruh teks');
+        }catch(e){ busy(false); toast('Gagal: '+e.message); }
+      });
+
+      async function render(){
+        const pdf = await pdfjsLib.getDocument({data:bytes.slice()}).promise;
+        pages.innerHTML=''; pages.hidden=false; $('#tEmpty').hidden=true;
+        const dpr = window.devicePixelRatio||1;
+        const W = Math.min(pages.clientWidth||720, 880);
+        for(let i=1;i<=pdf.numPages;i++){
+          const page = await pdf.getPage(i);
+          const base = page.getViewport({scale:1});
+          const vp = page.getViewport({scale:(W*dpr)/base.width});
+          const wrap=document.createElement('div');
+          wrap.className='page'; wrap.dataset.page=i; wrap.dataset.w=vp.width; wrap.dataset.h=vp.height;
+          const cv=document.createElement('canvas');
+          cv.width=vp.width; cv.height=vp.height;
+          wrap.appendChild(cv);
+          pages.appendChild(wrap);
+          wrap.onclick = e=>{ if(e.target!==wrap && e.target!==cv) return; addMark(wrap, e); };
+          await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+        }
+      }
+      function addMark(wrap, e){
+        const text = $('#txt').value.trim();
+        if(!text) return toast('Isi teks dulu');
+        const r = wrap.getBoundingClientRect();
+        const m = {
+          id:++uid, page:+wrap.dataset.page,
+          xFrac:(e.clientX-r.left)/r.width,
+          yFrac:(e.clientY-r.top)/r.height,
+          text, size:Number($('#size').value)||14,
+          color:$('#color').value, font:$('#font').value, bold:$('#bold').checked
+        };
+        marks.push(m);
+        drawMark(wrap, m);
+        toast('Teks ditambahkan');
+      }
+      function drawMark(wrap, m){
+        wrap.querySelectorAll('.mark').forEach(el=>{ if(+el.dataset.id===m.id) el.remove(); });
+        const el=document.createElement('div');
+        el.className='mark'; el.dataset.id=m.id;
+        el.textContent=m.text;
+        el.style.left=(m.xFrac*100)+'%';
+        el.style.top=(m.yFrac*100)+'%';
+        el.style.color=m.color;
+        el.style.fontSize=(m.size/4)+'px';
+        el.style.fontFamily = m.font==='TimesRoman'?'Georgia,serif' : m.font==='Courier'?'Consolas,monospace' : 'system-ui,sans-serif';
+        el.style.fontWeight = m.bold? '800':'600';
+        el.innerHTML += '<button title="Hapus">&times;</button>';
+        wrap.appendChild(el);
+        el.querySelector('button').onclick = ev=>{ ev.stopPropagation(); el.remove(); marks=marks.filter(k=>k.id!==m.id); };
+        let drag=false;
+        el.addEventListener('pointerdown', ev=>{
+          if(ev.target.tagName==='BUTTON') return;
+          ev.preventDefault(); el.setPointerCapture(ev.pointerId);
+          const r=wrap.getBoundingClientRect();
+          const ox=m.xFrac, oy=m.yFrac;
+          drag=true;
+          const mv=e2=>{
+            m.xFrac=Math.min(1, Math.max(0, ox+(e2.clientX-ev.clientX)/r.width));
+            m.yFrac=Math.min(1, Math.max(0, oy+(e2.clientY-ev.clientY)/r.height));
+            el.style.left=(m.xFrac*100)+'%'; el.style.top=(m.yFrac*100)+'%';
+          };
+          const up=()=>{ el.removeEventListener('pointermove',mv); el.removeEventListener('pointerup',up); };
+          el.addEventListener('pointermove',mv); el.addEventListener('pointerup',up);
+        });
+      }
+      $('#clr').onclick = ()=>{ marks=[]; pages.querySelectorAll('.mark').forEach(e=>e.remove()); toast('Semua teks dihapus'); };
+
+      goBtn.onclick = async ()=>{
+        if(!bytes) return toast('Upload PDF dulu');
+        if(!marks.length) return toast('Belum ada teks yang ditambahkan');
+        busy(true,'Menyimpan PDF...');
+        try{
+          const doc = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption:true});
+          const cache={};
+          for(const m of marks){
+            const page = doc.getPages()[m.page-1];
+            if(!page) continue;
+            const {width:W,height:H} = page.getSize();
+            const fontName = (m.bold?'HelveticaBold':m.font);
+            cache[fontName] = cache[fontName] || await doc.embedFont(fontName);
+            const hex = m.color.replace('#','');
+            const color = PDFLib.rgb(
+              parseInt(hex.slice(0,2),16)/255,
+              parseInt(hex.slice(2,4),16)/255,
+              parseInt(hex.slice(4,6),16)/255);
+            page.drawText(m.text, {
+              x: m.xFrac*W,
+              y: H - (m.yFrac*H) - m.size*0.8,
+              size: m.size, font: cache[fontName], color
+            });
+          }
+          const name='pdf-diedit.pdf';
+          saveBlob(new Blob([await doc.save()],{type:'application/pdf'}), name);
+          historyPush('Edit PDF', name); busy(false);
+          showResult('Selesai: '+name);
+        }catch(e){ busy(false); toast('Gagal: '+e.message); console.error(e); }
+      };
+    }},
+
+  { id:'fill-form', name:'Isi Form PDF', desc:'Isi kolom formulir PDF, lalu ratakan.', icon:svg.form,
+    body:`<input type="file" id="f" accept="application/pdf" hidden>
+          <div class="drop" id="d">Upload PDF berformulir<small>Form AcroField yang bisa diisi</small></div>
+          <div class="meta-table" id="fields" style="margin-top:16px"></div>
+          <p class="hint" id="cnt" hidden></p>
+          <label class="hint" style="display:flex;gap:8px;align-items:center;cursor:pointer;margin-top:10px">
+            <input type="checkbox" id="flat" style="width:auto;accent-color:#CFFF74" /> Ratakan form (tidak bisa diedit lagi)
+          </label>
+          <button class="btn btn-block" id="go" disabled>Unduh PDF Terisi</button>`,
+    init(){
+      const f=$('#f');
+      let bytes=null, doc=null, updates=[];
+      bindDrop($('#d'), f, async fl=>{
+        const file=fl[0]; if(!file) return;
+        busy(true,'Membaca form...');
+        try{
+          bytes = new Uint8Array(await file.arrayBuffer());
+          doc = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption:true});
+          const form = doc.getForm();
+          const fields = form.getFields();
+          if(!fields.length){ busy(false); toast('PDF ini tidak punya kolom form'); return; }
+          updates=[];
+          $('#fields').innerHTML = fields.map(fd=>{
+            const n = fd.getName();
+            const ty = fd.constructor.name.replace('PDF','').replace('Field','');
+            if(fd instanceof PDFLib.PDFTextField)
+              return '<div class="field"><label>'+n+' (text)</label><input type="text" data-n="'+n+'" value="'+escAttr(fd.getText()||'')+'" /></div>';
+            if(fd instanceof PDFLib.PDFCheckBox)
+              return '<label class="hint" style="display:flex;gap:8px;align-items:center;cursor:pointer;padding:8px 0"><input type="checkbox" data-n="'+n+'" '+fd.isChecked()+' /><span>'+n+' (checkbox)</span></label>';
+            if(fd instanceof PDFLib.PDFDropdown){
+              const opts = fd.getOptions().map(o=>o.value ?? o);
+              return '<div class="field"><label>'+n+' (dropdown)</label><select data-n="'+n+'"><option value="">-- pilih --</option>'+
+                opts.map(o=>'<option>'+escHtml(o)+'</option>').join('')+'</select></div>';
+            }
+            if(fd instanceof PDFLib.PDFOptionList){
+              const opts = fd.getOptions().map(o=>o.value ?? o);
+              return '<div class="field"><label>'+n+' (list)</label><select data-n="'+n+'">'+opts.map(o=>'<option>'+escHtml(o)+'</option>').join('')+'</select></div>';
+            }
+            if(fd instanceof PDFLib.PDFRadioGroup){
+              const opts = fd.getOptions();
+              return '<div class="field"><label>'+n+' (radio)</label><select data-n="'+n+'"><option value="">-- pilih --</option>'+
+                opts.map(o=>'<option>'+escHtml(o.value ?? o)+'</option>').join('')+'</select></div>';
+            }
+            return '';
+          }).join('');
+          $('#cnt').hidden=false;
+          $('#cnt').textContent = fields.length+' kolom form terdeteksi';
+          $('#go').disabled=false; busy(false);
+          toast(fields.length+' kolom ditemukan');
+        }catch(e){ busy(false); toast('Gagal: '+e.message); console.error(e); }
+      });
+
+      $('#go').onclick = async ()=>{
+        if(!doc) return toast('Upload PDF dulu');
+        busy(true,'Menyimpan...');
+        try{
+          const form = doc.getForm();
+          const font = await doc.embedFont('Helvetica');
+          $('#fields').querySelectorAll('[data-n]').forEach(el=>{
+            const n = el.dataset.n;
+            try{
+              if(el.type==='checkbox'){
+                el.checked ? form.getCheckBox(n).check() : form.getCheckBox(n).uncheck();
+              }else if(el.tagName==='SELECT'){
+                const v = el.value;
+                const fd = form.getField(n);
+                if(!v) return;
+                if(fd instanceof PDFLib.PDFRadioGroup) fd.select(v);
+                else if(fd instanceof PDFLib.PDFDropdown) fd.select(v);
+                else if(fd instanceof PDFLib.PDFOptionList) fd.select(v);
+              }else{
+                form.getTextField(n).setText(el.value);
+              }
+            }catch(e){ console.warn('kolom '+n+' gagal', e); }
+          });
+          form.updateFieldAppearances(font);
+          if($('#flat').checked) form.flatten();
+          const name='form-terisi.pdf';
+          saveBlob(new Blob([await doc.save()],{type:'application/pdf'}), name);
+          historyPush('Isi Form PDF', name); busy(false);
+          showResult('Selesai: '+name);
+        }catch(e){ busy(false); toast('Gagal: '+e.message); console.error(e); }
+      };
     }},
 
   { id:'zip', name:'Kompresor ZIP', desc:'Gabung & kompres banyak file jadi satu ZIP.', icon:svg.zip,
