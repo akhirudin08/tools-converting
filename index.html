@@ -171,6 +171,28 @@ a.btn-ghost{color:#2F3A1D}
 .crop-stage canvas{display:block;max-width:100%;cursor:crosshair;touch-action:none}
 @media(max-width:600px){.grid2{grid-template-columns:1fr}}
 
+/* ---------- FAVORIT & URUTAN ---------- */
+.star-inline{color:#C0552F}
+.fav-head{display:flex;align-items:baseline;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.fav-title{font-size:1.1rem;font-weight:800;letter-spacing:-.02em}
+.fav-head .hint{font-size:.82rem}
+#favGrid{
+  border:2px dashed rgba(47,58,29,.22);border-radius:var(--radius-lg);padding:14px;
+  background:rgba(207,255,116,.16);
+}
+#favGrid:empty{display:none}
+.fav-btn{
+  position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:50%;
+  display:grid;place-items:center;font-size:1rem;color:var(--ink-mute);
+  background:rgba(255,255,255,.7);transition:.18s;z-index:3;
+}
+.fav-btn:hover{transform:scale(1.15);color:#C0552F}
+.card.on-fav .fav-btn{background:#CFFF74;color:#2F3A1D}
+.card.on-fav{border-color:#CFFF74}
+.sortable-ghost{opacity:.35}
+.sortable-drag{transform:rotate(2deg) scale(1.02);box-shadow:var(--shadow)}
+.fav-drop{background:rgba(207,255,116,.55)!important;border-color:#CFFF74!important}
+
 /* ---------- GABUNG PDF + GAMBAR ---------- */
 .mix-list{list-style:none;display:flex;flex-direction:column;gap:8px;width:100%;max-width:640px;margin:0 auto}
 .mix-item{
@@ -473,18 +495,26 @@ footer strong{color:var(--ink);font-weight:700}
   </header>
 
 <main class="wrap">
-  <section id="tools">
-    <div class="section-head reveal">
+<section id="tools">
+    <div class="section-head">
       <div>
         <h2>Semua Tools</h2>
-        <p>Pilih tool yang kamu butuh, langsung jalan di browser.</p>
+        <p>Seret kartu untuk mengurutkan, klik <span class="star-inline">&#9733;</span> untuk jadikan favorit.</p>
       </div>
-      <label class="search">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
-        <input type="text" id="search" placeholder="Cari tool..." />
-      </label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <label class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+          <input type="text" id="search" placeholder="Cari tool..." />
+        </label>
+        <button class="btn btn-ghost btn-sm" id="resetOrder">Reset urutan</button>
+      </div>
     </div>
-    <div class="grid" id="grid"></div>
+    <div class="fav-head" id="favHead" hidden>
+      <span class="fav-title">&#9733; Favorit</span>
+      <span class="hint">Seret dari bawah ke sini untuk menambahkan</span>
+    </div>
+    <div class="grid" id="favGrid" data-fav="1" hidden></div>
+    <div class="grid" id="grid" style="margin-top:14px"></div>
     <p class="empty" id="empty">Tool tidak ditemukan. Coba kata kunci lain.</p>
   </section>
 
@@ -2207,20 +2237,86 @@ const TOOLS = [
 /* =========================================================
    RENDER GRID + SEARCH
    ========================================================= */
-const grid = $('#grid');
+const grid = $('#grid'), favGrid = $('#favGrid'), favHead = $('#favHead');
+const KEY_FAV='tcFav', KEY_ORD='tcOrder';
+const cardOf = {};
+
 TOOLS.forEach(tool=>{
   const btn = document.createElement('button');
-  btn.className='card'; btn.dataset.name = tool.name.toLowerCase();
+  btn.className='card'; btn.dataset.id = tool.id;
+  btn.dataset.name = (tool.name+' '+tool.desc).toLowerCase();
   btn.innerHTML = `<div class="card-ico">${icon(tool.icon)}</div>
     <h3>${tool.name}</h3><p>${tool.desc}</p>
-    <span class="card-go">Buka Tool &rarr;</span>`;
+    <span class="card-go">Buka Tool &rarr;</span>
+    <span class="fav-btn" title="Favorit">&#9733;</span>`;
   btn.onclick = ()=>openTool(tool);
-  grid.appendChild(btn);
+  btn.querySelector('.fav-btn').onclick = e=>{ e.stopPropagation(); toggleFav(tool.id); };
+  cardOf[tool.id] = btn;
 });
+
+// ===== favorit & urutan (tersimpan di browser) =====
+const readLS = (k, fb) => { try{ return JSON.parse(localStorage.getItem(k)) || fb; }catch{ return fb; } };
+
+function favIds(){ return readLS(KEY_FAV, []).filter(id=>cardOf[id]); }
+function applyLayout(){
+  const favs = favIds();
+  const savedOrd = readLS(KEY_ORD, null);
+  const rest = savedOrd
+    ? savedOrd.filter(id=>cardOf[id] && !favs.includes(id))
+    : TOOLS.map(t=>t.id).filter(id=>!favs.includes(id));
+  TOOLS.forEach(t=>{ if(!rest.includes(t.id) && !favs.includes(t.id)) rest.push(t.id); });
+
+  favGrid.innerHTML=''; grid.innerHTML='';
+  favs.forEach(id=> favGrid.appendChild(cardOf[id]));
+  rest.forEach(id=> grid.appendChild(cardOf[id]));
+  favs.forEach(id=> cardOf[id].classList.add('on-fav'));
+  favGrid.hidden = favHead.hidden = !favs.length;
+}
+function saveOrder(){
+  localStorage.setItem(KEY_ORD, JSON.stringify([...grid.children].map(c=>c.dataset.id)));
+}
+function saveFav(){
+  localStorage.setItem(KEY_FAV, JSON.stringify([...favGrid.children].map(c=>c.dataset.id)));
+  favGrid.hidden = favHead.hidden = !favGrid.children.length;
+}
+function toggleFav(id){
+  const el = cardOf[id];
+  if(favGrid.contains(el)) grid.appendChild(el);
+  else favGrid.prepend(el);
+  el.classList.toggle('on-fav', favGrid.contains(el));
+  saveFav(); saveOrder();
+}
+$('#resetOrder').onclick = ()=>{
+  localStorage.removeItem(KEY_ORD); localStorage.removeItem(KEY_FAV);
+  applyLayout(); toast('Urutan & favorit direset');
+};
+
+let dragId = null;
+document.addEventListener('pointerdown', e=>{ const c=e.target.closest('.card'); dragId = c? c.dataset.id : null; });
+document.addEventListener('touchstart', e=>{ const c=e.target.closest('.card'); dragId = c? c.dataset.id : null; }, {passive:true});
+
+const onSort = ()=>{ if(dragId && cardOf[dragId]) cardOf[dragId].classList.toggle('on-fav', favGrid.contains(cardOf[dragId])); };
+const onAdd   = ()=>{ onSort(); saveFav(); saveOrder(); };
+const onRemove= ()=>{ onSort(); saveFav(); saveOrder(); };
+
+new Sortable(grid, {
+  group:'cards', animation:180, forceFallback:true, fallbackTolerance:4, fallbackOnBody:true,
+  draggable:'.card', ghostClass:'sortable-ghost', dragClass:'sortable-drag',
+  onEnd: saveOrder, onAdd, onRemove, onSort
+});
+new Sortable(favGrid, {
+  group:'cards', animation:180, forceFallback:true, fallbackTolerance:4, fallbackOnBody:true,
+  draggable:'.card', ghostClass:'sortable-ghost', dragClass:'sortable-drag',
+  emptyInsertThreshold: 40,
+  onEnd: saveOrder, onAdd, onRemove, onSort
+});
+
+applyLayout();
+
 $('#search').addEventListener('input', e=>{
   const q = e.target.value.toLowerCase().trim();
   let shown=0;
-  grid.querySelectorAll('.card').forEach(c=>{
+  document.querySelectorAll('.card').forEach(c=>{
     const hit = c.dataset.name.includes(q);
     c.style.display = hit?'':'none';
     if(hit) shown++;
@@ -2317,6 +2413,7 @@ function countUp(el){
    ========================================================= */
 grid.querySelectorAll('.card').forEach(card=>{
   card.addEventListener('mousemove', e=>{
+    if(card.classList.contains('sortable-drag')) return;
     const r = card.getBoundingClientRect();
     const x = (e.clientX-r.left)/r.width - .5;
     const y = (e.clientY-r.top)/r.height - .5;
