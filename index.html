@@ -488,7 +488,7 @@ footer strong{color:var(--ink);font-weight:700}
   </div>
 
   <section class="stats">
-    <div class="stat reveal"><b data-count="21">0</b><span>Tools Konversi</span></div>
+    <div class="stat reveal"><b data-count="29">0</b><span>Tools Konversi</span></div>
     <div class="stat reveal"><b data-count="6">0</b><span>Format Didukung</span></div>
     <div class="stat reveal"><b data-count="100" data-suffix="%">0</b><span>Gratis &amp; Lokal</span></div>
   </section>
@@ -675,6 +675,48 @@ function bindDrop(zone, input, handler){
 }
 
 /* =========================================================
+   HELPER: muat script on-demand & thumbnail halaman PDF
+   ========================================================= */
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    const exist = document.querySelector('script[data-src="'+src+'"]');
+    if(exist){ exist.dataset.loaded ? res() : exist.addEventListener('load',res); return; }
+    const s=document.createElement('script');
+    s.src=src; s.dataset.src=src;
+    s.onload=()=>{ s.dataset.loaded='1'; res(); };
+    s.onerror=()=>rej(new Error('Gagal memuat '+src));
+    document.head.appendChild(s);
+  });
+}
+async function buildThumbs(bytes, container, onPick){
+  const pdf = await pdfjsLib.getDocument({data:bytes.slice()}).promise;
+  const dpr = window.devicePixelRatio||1;
+  const items = [];
+  container.innerHTML='';
+  for(let i=1;i<=pdf.numPages;i++){
+    const page = await pdf.getPage(i);
+    const base = page.getViewport({scale:1});
+    const vp = page.getViewport({scale:(210*dpr)/base.width});
+    const el = document.createElement('div');
+    el.className='page-item on';
+    el.innerHTML='<b>'+i+'</b><i>&check;</i>';
+    const cv = document.createElement('canvas');
+    cv.width=vp.width; cv.height=vp.height;
+    el.appendChild(cv);
+    container.appendChild(el);
+    const item = { num:i, el, on:true };
+    items.push(item);
+    if(onPick) el.onclick = ()=> onPick(item);
+    await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+  }
+  return items;
+}
+const toggleItem = item=>{
+  item.on = !item.on;
+  item.el.classList.toggle('on', item.on);
+};
+
+/* =========================================================
    TOOL DEFINITIONS
    ========================================================= */
 const svg = {
@@ -695,7 +737,15 @@ const svg = {
   rotate:'<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 5v6h-6"/>',
   info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
   crop:'<path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/>',
-  ruler:'<rect x="2" y="8" width="20" height="8" rx="2"/><path d="M7 8v3M12 8v4M17 8v3"/>'
+  ruler:'<rect x="2" y="8" width="20" height="8" rx="2"/><path d="M7 8v3M12 8v4M17 8v3"/>',
+  office:'<path d="M14 3v5h5"/><path d="M6 3h8l5 5v13H6z"/><path d="M9 13h6M9 17h6"/>',
+  scan:'<path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M4 12h16"/>',
+  compress:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><path d="M12 8v8M9 11l3-3 3 3"/>',
+  trash:'<path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/>',
+  lock:'<rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+  hash:'<path d="M6 9h12M6 15h12M10 4 8 20M16 4l-2 16"/>',
+  globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14 0 18-3-4-3-14.5 0-18z"/>',
+  key:'<circle cx="8" cy="15" r="4"/><path d="M11 12 20 3M17 6l2 2M14 9l2 2"/>'
 };
 const icon = p => `<svg viewBox="0 0 24 24" fill="none" stroke="#2F3A1D" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
 
@@ -2194,6 +2244,435 @@ const TOOLS = [
         const f=$('#from').value; $('#from').value=$('#to').value; $('#to').value=f; calc();
       };
       fill();
+    }},
+
+  { id:'office-pdf', name:'Office ke PDF', desc:'DOCX, XLSX, CSV, PPTX jadi PDF.', icon:svg.office,
+    body:`<input type="file" id="f" accept=".docx,.xlsx,.xls,.csv,.pptx" hidden>
+          <div class="drop" id="d">Upload dokumen Office<small>DOCX / XLSX / CSV / PPTX</small></div>
+          <div class="grid2">
+            <div class="field"><label>Ukuran</label><select id="size"><option value="a4">A4</option><option value="letter">Letter</option></select></div>
+            <div class="field"><label>Orientasi</label><select id="ori"><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select></div>
+          </div>
+          <button class="btn btn-block" id="go" disabled>Konversi ke PDF</button>`,
+    init(){
+      const f=$('#f');
+      let file=null;
+      bindDrop($('#d'), f, fl=>{ file=fl[0]; $('#go').disabled=!file; toast(file.name+' siap'); });
+      $('#go').onclick = async ()=>{
+        if(!file) return toast('Upload dokumen dulu');
+        busy(true,'Menyiapkan pustaka...');
+        try{
+          const buf = await file.arrayBuffer();
+          const name = file.name.replace(/\.[^.]+$/,'');
+          let html = '';
+          const ext = file.name.split('.').pop().toLowerCase();
+          if(ext==='docx'){
+            await loadScript('https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js');
+            busy(true,'Membaca DOCX...');
+            const r = await mammoth.convertToHtml({arrayBuffer:buf});
+            html = '<h1>'+name+'</h1>'+r.value;
+          }else if(ext==='pptx'){
+            await loadScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
+            busy(true,'Membaca PPTX...');
+            const zip = await JSZip.loadAsync(buf);
+            const slides = Object.keys(zip.files).filter(n=>/^ppt\/slides\/slide\d+\.xml$/.test(n))
+              .sort((a,b)=>(+a.match(/(\\d+)/)[1])-(+b.match(/(\\d+)/)[1]));
+            const parts=[];
+            for(let i=0;i<slides.length;i++){
+              const xml = await zip.file(slides[i]).async('text');
+              const texts = [...xml.matchAll(/<a:t>([\s\S]*?)<\/a:t>/g)].map(m=>m[1]);
+              parts.push('<h2>Slide '+(i+1)+'</h2><ul>'+texts.map(t=>'<li>'+t+'</li>').join('')+'</ul>');
+            }
+            html = '<h1>'+name+'</h1>'+parts.join('');
+          }else{
+            await loadScript('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js');
+            busy(true,'Membaca tabel...');
+            const wb = XLSX.read(new Uint8Array(buf), {type:'array'});
+            const sheets = wb.SheetNames.map(sn=>'<h2>'+sn+'</h2>'+XLSX.utils.sheet_to_html(wb.Sheets[sn]));
+            html = '<h1>'+name+'</h1>'+sheets.join('');
+          }
+          busy(true,'Merender PDF...');
+          const box=document.createElement('div');
+          box.innerHTML='<div style="font-family:sans-serif;padding:10px">'+html+'</div>';
+          const outName = name+'.pdf';
+          await html2pdf().set({
+            margin:10, filename:outName, html2canvas:{scale:2},
+            jsPDF:{unit:'mm', format:$('#size').value, orientation:$('#ori').value}
+          }).from(box).save();
+          historyPush('Office ke PDF', outName); busy(false);
+          showResult('Selesai: '+outName);
+        }catch(e){ busy(false); toast('Gagal: '+e.message); console.error(e); }
+      };
+    }},
+
+  { id:'ocr', name:'OCR Gambar ke Teks', desc:'Baca teks dari gambar/foto.', icon:svg.scan,
+    body:`<input type="file" id="f" accept="image/*" hidden>
+          <div class="drop" id="d">Upload gambar<small>JPG / PNG, bahasa Indonesia &amp; Inggris</small></div>
+          <div class="grid2">
+            <div class="field"><label>Bahasa</label><select id="lang"><option value="ind+eng">Indonesia + Inggris</option><option value="ind">Indonesia</option><option value="eng">Inggris</option><option value="ara">Arab</option><option value="jpn">Jepang</option></select></div>
+            <div class="field"><label>&nbsp;</label><button class="btn" id="run">Mulai OCR</button></div>
+          </div>
+          <textarea id="out" rows="10" placeholder="Hasil OCR akan muncul di sini..."></textarea>
+          <div class="grid2">
+            <button class="btn" id="copy">Salin Teks</button>
+            <button class="btn btn-ghost" id="dl">Unduh .txt</button>
+          </div>`,
+    init(){
+      const f=$('#f');
+      let file=null;
+      bindDrop($('#d'), f, fl=>{ file=fl[0]; toast(file.name+' siap'); });
+      $('#run').onclick = async ()=>{
+        if(!file) return toast('Upload gambar dulu');
+        busy(true,'Mengunduh model OCR...');
+        try{
+          await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');
+          busy(true,'Mengenali teks (±20 detik)...');
+          const r = await Tesseract.recognize(file, $('#lang').value, {
+            logger: m=>{ if(m.status) busy(true, m.status + ' ' + Math.round((m.progress||0)*100) + '%'); }
+          });
+          $('#out').value = r.data.text;
+          busy(false);
+          toast('OCR selesai');
+        }catch(e){ busy(false); toast('OCR gagal: '+e.message); console.error(e); }
+      };
+      $('#copy').onclick = ()=>{ navigator.clipboard.writeText($('#out').value).then(()=>toast('Teks disalin')); };
+      $('#dl').onclick = ()=>{
+        const name='ocr_'+Date.now()+'.txt';
+        saveBlob(new Blob([$('#out').value],{type:'text/plain'}), name);
+        historyPush('OCR Gambar ke Teks', name);
+      };
+    }},
+
+  { id:'pdf-compress', name:'Kompres PDF', desc:'Perkecil ukuran file PDF.', icon:svg.compress,
+    body:`<input type="file" id="f" accept="application/pdf" hidden>
+          <div class="drop" id="d">Upload PDF</div>
+          <div class="field"><label>Metode</label><select id="mode">
+            <option value="struct">Ringan — struktur dioptimalkan (teks tetap asli)</option>
+            <option value="raster">Paling kecil — gambar ulang (teks jadi gambar)</option>
+          </select></div>
+          <div class="field" id="qBox" style="display:none"><label>Kualitas gambar <span id="qVal" class="hint" style="float:right">70</span></label>
+            <input type="range" id="q" min="30" max="95" value="70" style="width:100%;accent-color:#CFFF74" /></div>
+          <button class="btn btn-block" id="go" disabled>Kompres &amp; Unduh</button>`,
+    init(){
+      const f=$('#f');
+      let bytes=null;
+      $('#mode').onchange = ()=> $('#qBox').style.display = $('#mode').value==='raster'?'block':'none';
+      $('#q').oninput = e=> $('#qVal').textContent = e.target.value;
+      bindDrop($('#d'), f, async fl=>{
+        const file=fl[0]; if(!file) return;
+        busy(true,'Membaca PDF...');
+        try{
+          bytes = new Uint8Array(await file.arrayBuffer());
+          busy(false); $('#go').disabled=false;
+          toast('Ukuran asli: '+(bytes.length/1024/1024).toFixed(2)+' MB');
+        }catch(e){ busy(false); toast('Gagal: '+e.message); }
+      });
+      $('#go').onclick = async ()=>{
+        if(!bytes) return toast('Upload PDF dulu');
+        busy(true,'Mengompres...');
+        try{
+          let out;
+          if($('#mode').value==='struct'){
+            const doc = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption:true});
+            doc.setProducer('Tumbuhin'); doc.setModificationDate(new Date());
+            out = await doc.save({useObjectStreams:true});
+          }else{
+            const q = Number($('#q').value)/100;
+            const pdf = await pdfjsLib.getDocument({data:bytes.slice()}).promise;
+            const doc = await PDFLib.PDFDocument.create();
+            for(let i=1;i<=pdf.numPages;i++){
+              const page = await pdf.getPage(i);
+              const vp = page.getViewport({scale:2});
+              const cv=document.createElement('canvas');
+              cv.width=vp.width; cv.height=vp.height;
+              await page.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise;
+              const blob = await new Promise(r=>cv.toBlob(r,'image/jpeg',q));
+              const img = await doc.embedJpg(new Uint8Array(await blob.arrayBuffer()));
+              const p = doc.addPage([img.width, img.height]);
+              p.drawImage(img, {x:0,y:0,width:img.width,height:img.height});
+            }
+            out = await doc.save({useObjectStreams:true});
+          }
+          const name = 'pdf_kompres.pdf';
+          const blob = new Blob([out], {type:'application/pdf'});
+          saveBlob(blob, name);
+          const pct = Math.round((1 - blob.size/bytes.length)*100);
+          historyPush('Kompres PDF', name);
+          busy(false);
+          showResult((pct>0? 'Hemat '+pct+'%' : 'Ukuran tidak berkurang') +
+            ' · '+(bytes.length/1024/1024).toFixed(2)+' MB → '+(blob.size/1024/1024).toFixed(2)+' MB');
+        }catch(e){ busy(false); toast('Gagal: '+e.message); console.error(e); }
+      };
+    }},
+
+  { id:'delete-pages', name:'Hapus Halaman PDF', desc:'Buang halaman yang tidak diperlukan.', icon:svg.trash,
+    body:`<input type="file" id="f" accept="application/pdf" hidden>
+          <div class="drop" id="d">Upload PDF<small>Klik halaman yang mau dihapus (abu = disimpan)</small></div>
+          <div class="page-grid" id="grid" hidden></div>
+          <p class="hint" id="info" hidden></p>
+          <button class="btn btn-block" id="go" disabled>Simpan Tanpa Halaman Terpilih</button>`,
+    init(){
+      const f=$('#f'), grid=$('#grid');
+      let bytes=null, items=[];
+      bindDrop($('#d'), f, async fl=>{
+        const file=fl[0]; if(!file) return;
+        busy(true,'Membaca PDF...');
+        try{
+          bytes = new Uint8Array(await file.arrayBuffer());
+          items = await buildThumbs(bytes, grid, item=>{
+            item.on = !item.on;
+            item.el.classList.toggle('on', item.on);
+            item.el.style.opacity = item.on? '1' : '.35';
+            update();
+          });
+          grid.hidden=false; $('#info').hidden=false; update();
+          busy(false);
+        }catch(e){ busy(false); toast('Gagal: '+e.message); }
+      });
+      function update(){
+        const del = items.filter(i=>!i.on).length;
+        $('#info').textContent = items.length+' halaman · '+del+' akan dihapus';
+        $('#go').disabled = !items.length || del===items.length;
+      }
+      $('#go').onclick = async ()=>{
+        busy(true,'Menyusun PDF...');
+        try{
+          const src = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption:true});
+          const out = await PDFLib.PDFDocument.create();
+          const keep = items.filter(i=>i.on).map(i=>i.num-1);
+          const pages = await out.copyPages(src, keep);
+          pages.forEach(p=>out.addPage(p));
+          const name='pdf_tanpa_halaman.pdf';
+          saveBlob(new Blob([await out.save()],{type:'application/pdf'}), name);
+          historyPush('Hapus Halaman PDF', name); busy(false);
+          showResult('Sisa halaman: '+pages.length);
+        }catch(e){ busy(false); toast('Gagal: '+e.message); }
+      };
+    }},
+
+  { id:'protect-pdf', name:'Proteksi PDF', desc:'Kunci PDF dengan password.', icon:svg.lock,
+    body:`<input type="file" id="f" accept="application/pdf" hidden>
+          <div class="drop" id="d">Upload PDF</div>
+          <div class="grid2">
+            <div class="field"><label>Password pembuka</label><input type="text" id="user" value="rahasia123" /></div>
+            <div class="field"><label>Password pemilik</label><input type="text" id="owner" value="admin123" /></div>
+          </div>
+          <label class="hint" style="display:flex;gap:8px;align-items:center;cursor:pointer">
+            <input type="checkbox" id="nocopy" style="width:auto;accent-color:#CFFF74" /> Larang menyalin konten
+          </label>
+          <button class="btn btn-block" id="go" disabled>Kunci PDF</button>
+          <p class="hint">Catatan: file asli tidak diubah, hasil disimpan sebagai <b>nama-terkunci.pdf</b>.</p>`,
+    init(){
+      const f=$('#f');
+      let bytes=null;
+      bindDrop($('#d'), f, async fl=>{
+        const file=fl[0]; if(!file) return;
+        bytes = new Uint8Array(await file.arrayBuffer());
+        $('#go').disabled=false;
+        toast('PDF dimuat');
+      });
+      $('#go').onclick = async ()=>{
+        if(!bytes) return toast('Upload PDF dulu');
+        busy(true,'Menyiapkan pustaka enkripsi...');
+        try{
+          const mod = await import('https://cdn.jsdelivr.net/npm/@cantoo/pdf-lib@2.11.1/+esm');
+          busy(true,'Mengekripsi...');
+          const src = await mod.PDFDocument.load(bytes, {ignoreEncryption:true});
+          const out = await mod.PDFDocument.create({
+            userPassword: $('#user').value || undefined,
+            ownerPassword: $('#owner').value || undefined
+          });
+          const pages = await out.copyPages(src, src.getPageIndices());
+          pages.forEach(p=>out.addPage(p));
+          if($('#nocopy').checked) out.setProducer('Dilarang disalin');
+          const name = 'dokumen-terkunci.pdf';
+          saveBlob(new Blob([await out.save()],{type:'application/pdf'}), name);
+          historyPush('Proteksi PDF', name); busy(false);
+          showResult('PDF terkunci: '+name);
+        }catch(e){ busy(false); toast('Gagal: '+e.message); console.error(e); }
+      };
+    }},
+
+  { id:'stamp-no', name:'Nomor & Tanggal Dokumen', desc:'Beri nomor dokumen dan tanggal.', icon:svg.hash,
+    body:`<input type="file" id="f" accept="application/pdf" hidden>
+          <div class="drop" id="d">Upload PDF</div>
+          <div class="grid2">
+            <div class="field"><label>Nomor dokumen</label><input type="text" id="no" value="DOC/2026/001" /></div>
+            <div class="field"><label>Tanggal</label><input type="text" id="date" /></div>
+          </div>
+          <div class="field"><label>Template (opsional)</label><input type="text" id="tpl" value="No: {nomor} &middot; {tanggal}" /></div>
+          <div class="grid2">
+            <div class="field"><label>Posisi</label><select id="pos"><option value="br">Kanan bawah</option><option value="bl">Kiri bawah</option><option value="tr">Kanan atas</option><option value="tl">Kiri atas</option></select></div>
+            <div class="field"><label>Ukuran font</label><input type="text" id="fs" value="10" /></div>
+          </div>
+          <label class="hint" style="display:flex;gap:8px;align-items:center;cursor:pointer">
+            <input type="checkbox" id="all" checked style="width:auto;accent-color:#CFFF74" /> Terapkan ke semua halaman
+          </label>
+          <button class="btn btn-block" id="go" disabled>Terapkan</button>`,
+    init(){
+      const f=$('#f');
+      let bytes=null;
+      $('#date').value = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+      bindDrop($('#d'), f, async fl=>{
+        const file=fl[0]; if(!file) return;
+        bytes = new Uint8Array(await file.arrayBuffer());
+        $('#go').disabled=false; toast('PDF dimuat');
+      });
+      $('#go').onclick = async ()=>{
+        if(!bytes) return toast('Upload PDF dulu');
+        busy(true,'Menerapkan...');
+        try{
+          const doc = await PDFLib.PDFDocument.load(bytes, {ignoreEncryption:true});
+          const font = await doc.embedFont('Helvetica');
+          const nomor = $('#no').value, tgl = $('#date').value;
+          const txt = ($('#tpl').value||'').replace('{nomor}', nomor).replace('{tanggal}', tgl).replace(/&middot;/g,'·');
+          const size = Number($('#fs').value)||10;
+          const pages = $('#all').checked ? doc.getPages() : [doc.getPages()[0]];
+          const pos = $('#pos').value;
+          for(const page of pages){
+            const {width:W,height:H} = page.getSize();
+            const w = font.widthOfTextAtSize(txt, size);
+            let x = pos.includes('r') ? W-w-24 : 24;
+            let y = pos.includes('b') ? 24 : H-size-24;
+            page.drawText(txt, { x, y, size, font, color: PDFLib.rgb(0.18,0.23,0.11), opacity:.85 });
+          }
+          const name = 'dokumen-bernomor.pdf';
+          saveBlob(new Blob([await doc.save()],{type:'application/pdf'}), name);
+          historyPush('Nomor & Tanggal Dokumen', name); busy(false);
+          showResult('Selesai: '+name);
+        }catch(e){ busy(false); toast('Gagal: '+e.message); console.error(e); }
+      };
+    }},
+
+  { id:'url-pdf', name:'URL ke PDF', desc:'Simpan halaman web jadi PDF.', icon:svg.globe,
+    body:`<div class="drop" id="d">Tempel URL halaman di bawah</div>
+          <div class="field"><label>URL</label><input type="text" id="url" placeholder="https://contoh.com/artikel" /></div>
+          <div class="grid2">
+            <div class="field"><label>Ukuran</label><select id="size"><option value="a4">A4</option><option value="letter">Letter</option></select></div>
+            <div class="field"><label>Orientasi</label><select id="ori"><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select></div>
+          </div>
+          <button class="btn btn-block" id="go">Buat PDF dari URL</button>
+          <p class="hint"> beberapa situs memblokir proses ini karena kebijakan CORS. Kalau gagal, coba tombol <b>Salin Konten</b> lalu pakai tool HTML ke PDF.</p>
+          <textarea id="html" rows="4" placeholder="HTML hasil salin (opsional)" hidden></textarea>
+          <button class="btn btn-ghost btn-block" id="fromHtml" hidden>Buat PDF dari HTML di bawah</button>`,
+    init(){
+      const urlOf = ()=> $('#url').value.trim();
+      $('#go').onclick = async ()=>{
+        const url = urlOf();
+        if(!url) return toast('Isi URL dulu');
+        busy(true,'Mengambil halaman...');
+        const proxies = [
+          u=>u,
+          u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),
+          u=>'https://corsproxy.io/?url='+encodeURIComponent(u)
+        ];
+        let html=null;
+        for(const p of proxies){
+          try{
+            const r = await fetch(p(url));
+            if(!r.ok) throw new Error('HTTP '+r.status);
+            html = await r.text();
+            if(html.length>200) break;
+            html=null;
+          }catch(e){ html=null; }
+        }
+        if(!html){
+          busy(false);
+          $('#html').hidden=false; $('#fromHtml').hidden=false;
+          return toast('Gagal mengambil halaman — salin manual lalu pakai tombol di bawah');
+        }
+        busy(true,'Merender PDF...');
+        try{
+          const box=document.createElement('div');
+          box.innerHTML=html;
+          const name='web-'+Date.now()+'.pdf';
+          await html2pdf().set({margin:10, filename:name, html2canvas:{scale:2, useCORS:true},
+            jsPDF:{unit:'mm', format:$('#size').value, orientation:$('#ori').value}}).from(box).save();
+          historyPush('URL ke PDF', name); busy(false); showResult('Selesai: '+name);
+        }catch(e){ busy(false); toast('Gagal render: '+e.message); }
+      };
+      $('#fromHtml').onclick = async ()=>{
+        const html = $('#html').value.trim();
+        if(!html) return toast('Isi HTML dulu');
+        busy(true,'Merender...');
+        try{
+          const box=document.createElement('div');
+          box.innerHTML=html;
+          const name='web-'+Date.now()+'.pdf';
+          await html2pdf().set({margin:10, filename:name, html2canvas:{scale:2, useCORS:true},
+            jsPDF:{unit:'mm', format:$('#size').value, orientation:$('#ori').value}}).from(box).save();
+          historyPush('URL ke PDF', name); busy(false); showResult('Selesai: '+name);
+        }catch(e){ busy(false); toast('Gagal: '+e.message); }
+      };
+    }},
+
+  { id:'dev-tools', name:'Generator & Hash', desc:'Password acak, UUID, hash SHA-256.', icon:svg.key,
+    body:`<div class="field"><label>Password</label>
+            <div class="grid2">
+              <div class="field"><label>Panjang</label><input type="text" id="plen" value="16" /></div>
+              <div class="field"><label>Alfabet</label><select id="palpha"><option value="all">Semua</option><option value="easy">Mudah diketik</option><option value="num">Angka saja</option></select></div>
+            </div>
+            <label class="hint" style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="pup" checked style="width:auto;accent-color:#CFFF74" /> Huruf besar</label>
+            <label class="hint" style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="psy" checked style="width:auto;accent-color:#CFFF74" /> Simbol</label>
+          </div>
+          <div class="unit-out" id="pout" style="font-size:1.1rem">-</div>
+          <div class="grid2">
+            <button class="btn" id="pgen">Buat Password</button>
+            <button class="btn btn-ghost" id="pcopy">Salin</button>
+          </div>
+          <div class="field" style="margin-top:16px"><label>UUID v4 (jumlah: <span id="ucountVal">5</span>)</label>
+            <div class="row"><input type="text" id="ucount" value="5" style="max-width:90px" /><button class="btn btn-sm" id="ugen">Buat UUID</button></div>
+          </div>
+          <textarea id="uout" rows="5" readonly></textarea>
+          <div class="field" style="margin-top:16px"><label>Hash teks (SHA-256)</label>
+            <textarea id="htext" rows="2" placeholder="Teks untuk di-hash"></textarea>
+            <div class="grid2"><button class="btn" id="hgo">Hitung SHA-256</button><button class="btn btn-ghost" id="hcopy">Salin</button></div>
+          </div>
+          <div class="unit-out" id="hout" style="font-size:.85rem">-</div>`,
+    init(){
+      const SETS = {
+        all:'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+[]{};:,.<>?',
+        easy:'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789',
+        num:'0123456789'
+      };
+      function rand(max){
+        const a = new Uint32Array(1);
+        crypto.getRandomValues(a);
+        return a[0] % max;
+      }
+      $('#pgen').onclick = ()=>{
+        let set = SETS[$('#palpha').value];
+        if(!$('#pup').checked) set = set.replace(/[A-Z]/g,'');
+        if(!$('#psy').checked) set = set.replace(/[!@#$%^&*()\-_=+[\]{};:,.<>?]/g,'');
+        const n = Math.min(64, Math.max(4, Number($('#plen').value)||16));
+        let out='';
+        for(let i=0;i<n;i++) out += set[rand(set.length)];
+        $('#pout').textContent = out;
+      };
+      $('#pcopy').onclick = ()=> navigator.clipboard.writeText($('#pout').textContent).then(()=>toast('Password disalin'));
+      $('#ucount').oninput = e=> $('#ucountVal').textContent = e.target.value;
+      $('#ugen').onclick = ()=>{
+        const n = Math.min(50, Math.max(1, Number($('#ucount').value)||5));
+        const mk = ()=>{
+          if(crypto.randomUUID) return crypto.randomUUID();
+          const b=new Uint8Array(16); crypto.getRandomValues(b);
+          b[6]=(b[6]&0x0f)|0x40; b[8]=(b[8]&0x3f)|0x80;
+          const h=[...b].map(x=>x.toString(16).padStart(2,'0')).join('');
+          return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);
+        };
+        const arr=[];
+        for(let i=0;i<n;i++) arr.push(mk());
+        $('#uout').value = arr.join('\n');
+      };
+      $('#hgo').onclick = async ()=>{
+        const t = $('#htext').value;
+        if(!t) return toast('Isi teks dulu');
+        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t));
+        $('#hout').textContent = [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+      };
+      $('#hcopy').onclick = ()=> navigator.clipboard.writeText($('#hout').textContent).then(()=>toast('Hash disalin'));
+      $('#pgen').click();
+      $('#ugen').click();
     }},
 
   { id:'zip', name:'Kompresor ZIP', desc:'Gabung & kompres banyak file jadi satu ZIP.', icon:svg.zip,

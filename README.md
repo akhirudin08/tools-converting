@@ -33,6 +33,22 @@ Semua tool dibuka lewat satu dashboard (tanpa berpindah halaman):
 | Metadata PDF | Lihat & ubah Title, Author, Subject, Keywords |
 | Crop & Rotasi Gambar | Potong, putar, balik gambar |
 | Konversi Satuan | Panjang, berat, luas, volume, suhu, kecepatan, waktu, data |
+| Office ke PDF | DOCX, XLSX, CSV, PPTX → PDF |
+| OCR Gambar ke Teks | Baca teks dari gambar (Tesseract, ind/eng/ara/jpn) |
+| Kompres PDF | Optimasi struktur atau raster ulang (paling kecil) |
+| Hapus Halaman PDF | Pilih halaman yang dibuang, simpan sisanya |
+| Proteksi PDF | Kunci PDF dengan password pembuka & pemilik |
+| Nomor & Tanggal Dokumen | Stempel nomor dokumen + tanggal, posisi bebas |
+| URL ke PDF | Simpan halaman web jadi PDF |
+| Generator & Hash | Password acak, UUID v4, hash SHA-256 |
+
+Semua工具 berjalan di browser. Library berat (Mammoth, SheetJS, Tesseract, enkripsi PDF) **dimuat on-demand** saat tool dipakai, bukan saat halaman dibuka.
+
+## ✨ Fitur dashboard
+
+- **Favorit** — klik ★ pada kartu atau seret ke area favorit
+- **Susun kartu** — seret kartu untuk mengubah urutan
+- Keduanya tersimpan di `localStorage` browser masing-masing, dan bisa di-reset lewat tombol **Reset urutan**
 
 Fitur pendukung:
 
@@ -62,7 +78,7 @@ Buka `index.html` di browser modern, lalu pilih tool yang dibutuhkan.
 
 ## 📌 Catatan
 
-Semua tool berjalan sepenuhnya di browser — tidak ada data yang dikirim ke server.
+Semua tools berjalan sepenuhnya di browser — tidak ada data yang dikirim ke server.
 
 Untuk konversi Word, Excel, PowerPoint, dll. mungkin butuh library tambahan.
 
